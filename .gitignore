@@ -14,5 +14,5 @@ data/reports/*.csv
 data/reports/*.md
 *.db
 /开题文档/
-
-
+/.codex/skills/
+AGENTS.md
