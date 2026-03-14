@@ -1,28 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-
 import streamlit as st
 
-from asr_eval_system.models.registry import build_model_registry
 
-
-st.title("模型管理")
-st.write("展示系统当前支持的模型及其统一元数据。")
-
-registry = build_model_registry(simulate=True)
-rows = []
-for model_id, adapter in registry.items():
-    rows.append(
-        {
-            "model_id": model_id,
-            "device": adapter.device,
-            "backend": adapter.metadata()["backend"],
-            "simulate": adapter.simulate,
-        }
-    )
-st.dataframe(rows, use_container_width=True)
-
+st.set_page_config(page_title="请使用首页工作台", page_icon=":house:")
+st.info("模型选择与加载已经整合到首页工作台中。")
+st.page_link("streamlit_app.py", label="返回首页工作台", icon=":material/home:")
