@@ -1,0 +1,16 @@
+score_mode: mixed
+lit_weights:
+  accuracy_semantic: 0.45
+  latency: 0.25
+  robustness: 0.20
+  resource: 0.10
+survey_weights: null
+survey_blend_ratio: 0.30
+good_bad_thresholds:
+  high: 85
+  good: 70
+  fair: 60
+source_notes:
+  - "Kim et al., SemDist and user-perceived correlation, Interspeech 2022"
+  - "Shangguan et al., user-perceived latency for E2E ASR, Interspeech 2021"
+  - "Walker et al., PARADISE framework for user satisfaction"

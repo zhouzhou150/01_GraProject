@@ -1,0 +1,32 @@
+[
+  {
+    "sample_id": "sample_01",
+    "audio_path": "F:\\01_GraProject\\data\\sample\\sample_01.wav",
+    "transcript": "深度学习语音识别",
+    "duration_sec": 1.0,
+    "split": "test",
+    "scene_tag": "quiet",
+    "noise_tag": "none",
+    "accent_tag": "standard"
+  },
+  {
+    "sample_id": "sample_02",
+    "audio_path": "F:\\01_GraProject\\data\\sample\\sample_02.wav",
+    "transcript": "语音识别性能测试",
+    "duration_sec": 1.0,
+    "split": "test",
+    "scene_tag": "noise_light",
+    "noise_tag": "light",
+    "accent_tag": "standard"
+  },
+  {
+    "sample_id": "sample_03",
+    "audio_path": "F:\\01_GraProject\\data\\sample\\sample_03.wav",
+    "transcript": "本科毕业设计系统",
+    "duration_sec": 1.0,
+    "split": "test",
+    "scene_tag": "noise_mid",
+    "noise_tag": "medium",
+    "accent_tag": "standard"
+  }
+]
