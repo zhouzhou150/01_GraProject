@@ -13,6 +13,6 @@ data/reports/*.json
 data/reports/*.csv
 data/reports/*.md
 *.db
-/F:/01_GraProject/开题文档/
+/01_GraProject/开题文档/
 
 
