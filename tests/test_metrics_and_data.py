@@ -7,9 +7,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from asr_eval_system.data.audio_utils import build_sample_id, decode_transcript_bytes, resolve_transcript_text, transcript_match_keys
 from asr_eval_system.data.dataset import load_manifest, validate_manifest
 from asr_eval_system.metrics.satisfaction import build_satisfaction_profile, compute_uss
 from asr_eval_system.metrics.text_metrics import cer, semdist_score, ser, wer
+from asr_eval_system.workflow import compute_workflow_progress
 
 
 class MetricsAndDataTests(unittest.TestCase):
@@ -66,6 +68,22 @@ class MetricsAndDataTests(unittest.TestCase):
             self.assertEqual(len(items), 1)
             self.assertEqual(issues, [])
             self.assertGreater(items[0].duration_sec, 0)
+
+    def test_transcript_matching_supports_trn(self) -> None:
+        transcript_map: dict[str, str] = {}
+        for key in transcript_match_keys("folder/A2_1.wav.trn"):
+            transcript_map[key] = decode_transcript_bytes("你好 世界\nmetadata".encode("utf-8"), suffix=".trn")
+        self.assertEqual(resolve_transcript_text(transcript_map, "folder/A2_1.wav"), "你好 世界")
+        self.assertEqual(build_sample_id("folder/A2_1.wav", 1), "folder_A2_1")
+
+    def test_workflow_progress_is_sequential(self) -> None:
+        progress = compute_workflow_progress(dataset_ready=False, loaded_model_count=2, performance_ready=True, overall_ready=True)
+        self.assertEqual(progress.progress_value, 0.0)
+        self.assertEqual(progress.current_step, "导入音频与参考文本")
+
+        progress = compute_workflow_progress(dataset_ready=True, loaded_model_count=1, performance_ready=False, overall_ready=True)
+        self.assertEqual(progress.progress_value, 0.5)
+        self.assertEqual(progress.current_step, "运行性能测试与总体测试")
 
 
 if __name__ == "__main__":

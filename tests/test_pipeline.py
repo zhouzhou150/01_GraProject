@@ -63,6 +63,8 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(len(report.summary), 4)
             self.assertEqual(len(report.sample_results), 8)
             self.assertIn("uss_ranking", report.charts)
+            self.assertTrue(all(item["runtime_mode"] == "模拟" for item in report.summary))
+            self.assertTrue(all(item["backend"] for item in report.summary))
 
             export_paths = export_report_bundle(report, root)
             self.assertTrue(Path(export_paths["json"]).exists())

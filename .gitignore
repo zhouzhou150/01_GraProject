@@ -16,3 +16,4 @@ data/reports/*.md
 /开题文档/
 /.codex/skills/
 AGENTS.md
+exp/log/

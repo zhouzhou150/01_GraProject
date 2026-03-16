@@ -47,14 +47,14 @@ def _render_markdown_report(report: AggregateReport) -> str:
         "",
         "## 汇总结果",
         "",
-        "| 模型 | CER | WER | SER | SemDist | 平均延迟(ms) | USS | 满意度等级 |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 模型 | 运行模式 | 后端 | CER | WER | SER | SemDist | 平均延迟(ms) | USS | 满意度等级 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for item in report.summary:
         lines.append(
-            f"| {item['model_id']} | {item['cer']:.4f} | {item['wer']:.4f} | {item['ser']:.4f} | "
-            f"{item['semdist']:.2f} | {item['avg_latency_ms']:.2f} | {item['uss']:.2f} | {item['satisfaction_level']} |"
+            f"| {item['model_id']} | {item.get('runtime_mode', '')} | {item.get('backend', '')} | "
+            f"{item['cer']:.4f} | {item['wer']:.4f} | {item['ser']:.4f} | {item['semdist']:.2f} | "
+            f"{item['avg_latency_ms']:.2f} | {item['uss']:.2f} | {item['satisfaction_level']} |"
         )
     lines.extend(["", "## 结论", "", report.conclusion_text or "当前实验已完成。", ""])
     return "\n".join(lines)
-

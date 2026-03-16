@@ -20,6 +20,7 @@ def run_experiment(
         adapter = model_registry[model_id]
         adapter.load()
         adapter.warmup()
+        metadata = adapter.metadata()
         model_results: list[InferenceResult] = []
 
         for item in dataset_items:
@@ -35,6 +36,8 @@ def run_experiment(
                 result = InferenceResult(
                     sample_id=item.sample_id,
                     model_id=model_id,
+                    backend=str(metadata.get("backend", "unknown")),
+                    runtime_mode="模拟" if bool(metadata.get("simulate", True)) else "真实",
                     pred_text=prediction,
                     ref_text=item.transcript,
                     latency_ms=round(infer_elapsed_ms, 4),
@@ -44,7 +47,7 @@ def run_experiment(
                     cpu_pct=cpu_pct,
                     mem_mb=mem_mb,
                     gpu_mem_mb=gpu_mem_mb,
-                    load_time_ms=adapter.metadata().get("load_time_ms", 0.0),
+                    load_time_ms=metadata.get("load_time_ms", 0.0),
                     cer=round(cer(item.transcript, prediction), 4),
                     wer=round(wer(item.transcript, prediction), 4),
                     ser=round(ser(item.transcript, prediction), 4),
@@ -58,6 +61,8 @@ def run_experiment(
                 result = InferenceResult(
                     sample_id=item.sample_id,
                     model_id=model_id,
+                    backend=str(metadata.get("backend", "unknown")),
+                    runtime_mode="模拟" if bool(metadata.get("simulate", True)) else "真实",
                     pred_text="",
                     ref_text=item.transcript,
                     latency_ms=round(infer_elapsed_ms, 4),
@@ -67,7 +72,7 @@ def run_experiment(
                     cpu_pct=cpu_pct,
                     mem_mb=mem_mb,
                     gpu_mem_mb=gpu_mem_mb,
-                    load_time_ms=adapter.metadata().get("load_time_ms", 0.0),
+                    load_time_ms=metadata.get("load_time_ms", 0.0),
                     cer=1.0,
                     wer=1.0,
                     ser=1.0,
@@ -133,4 +138,3 @@ def _build_conclusion(summary: list[dict]) -> str:
         f"识别误差最低的模型为 {best_cer['model_id']}，CER 为 {best_cer['cer']:.4f}。"
         f"平均延迟最低的模型为 {fastest['model_id']}，平均延迟为 {fastest['avg_latency_ms']:.2f} ms。"
     )
-

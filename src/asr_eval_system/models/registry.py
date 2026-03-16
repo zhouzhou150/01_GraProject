@@ -28,9 +28,16 @@ def build_model_adapter(
             device=device,
             simulate=simulate,
             model_size=str(config.get("model_size", "base")),
+            compute_type=str(config.get("compute_type", "int8")),
+            language=str(config.get("lang", "zh")),
         )
     if model_id == "paddlespeech":
-        return PaddleSpeechAdapter(device=device, simulate=simulate)
+        return PaddleSpeechAdapter(
+            device=device,
+            simulate=simulate,
+            lang=str(config.get("lang", "zh")),
+            postprocess=str(config.get("postprocess", "punctuation")),
+        )
     raise KeyError(f"Unknown model_id: {model_id}")
 
 

@@ -40,6 +40,8 @@ class ExperimentConfig:
 class InferenceResult:
     sample_id: str
     model_id: str
+    backend: str
+    runtime_mode: str
     pred_text: str
     ref_text: str
     latency_ms: float
@@ -67,6 +69,8 @@ class InferenceResult:
 @dataclass(slots=True)
 class AggregateMetrics:
     model_id: str
+    backend: str
+    runtime_mode: str
     sample_count: int
     cer: float
     wer: float
@@ -142,4 +146,3 @@ class AggregateReport:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-

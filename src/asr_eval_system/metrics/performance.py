@@ -63,6 +63,8 @@ def aggregate_results(
 
     return AggregateMetrics(
         model_id=model_id,
+        backend=results[0].backend,
+        runtime_mode=results[0].runtime_mode,
         sample_count=len(results),
         cer=avg_cer,
         wer=avg_wer,
@@ -101,4 +103,3 @@ def _resource_proxy(
     gpu_score = 100 - min((gpu_mem_mb or 0.0) / 81.92, 100.0)
     load_score = 100 - min(load_time_ms / 50.0, 100.0)
     return round((cpu_score + mem_score + gpu_score + load_score) / 4, 4)
-

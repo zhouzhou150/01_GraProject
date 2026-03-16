@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 import time
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -17,7 +18,17 @@ except ImportError:  # pragma: no cover
 import pandas as pd
 import streamlit as st
 
-from asr_eval_system.data.audio_utils import read_wave_duration
+from asr_eval_system.data.audio_utils import (
+    SUPPORTED_AUDIO_EXTENSIONS,
+    SUPPORTED_TRANSCRIPT_EXTENSIONS,
+    audio_player_format,
+    build_sample_id,
+    decode_transcript_bytes,
+    normalize_audio_file,
+    normalize_uploaded_name,
+    resolve_transcript_text,
+    transcript_match_keys,
+)
 from asr_eval_system.data.dataset import load_manifest, validate_manifest
 from asr_eval_system.models.registry import build_model_adapter, build_model_registry_from_specs
 from asr_eval_system.reporting.report_generator import export_report_bundle
@@ -32,6 +43,7 @@ from asr_eval_system.service import (
     runtime_dir,
 )
 from asr_eval_system.storage.database import DatabaseManager
+from asr_eval_system.workflow import WORKFLOW_STEP_TITLES, compute_workflow_progress
 
 
 st.set_page_config(page_title="ASR 多模型评测工作台", page_icon=":studio_microphone:", layout="wide")
@@ -56,6 +68,8 @@ OPTION_LABELS = {
 
 SUMMARY_COLUMN_MAP = {
     "model_label": "模型",
+    "runtime_mode": "运行模式",
+    "backend": "后端",
     "sample_count": "样本数",
     "cer": "CER",
     "wer": "WER",
@@ -77,6 +91,8 @@ SUMMARY_COLUMN_MAP = {
 
 SAMPLE_COLUMN_MAP = {
     "model_label": "模型",
+    "runtime_mode": "运行模式",
+    "backend": "后端",
     "sample_id": "样本 ID",
     "pred_text": "识别文本",
     "ref_text": "参考文本",
@@ -126,6 +142,7 @@ for key, value in {
     "performance_report": None,
     "overall_report": None,
     "overall_exports": None,
+    "flash_notice": None,
 }.items():
     st.session_state.setdefault(key, value)
 
@@ -134,6 +151,21 @@ def reset_reports() -> None:
     st.session_state["performance_report"] = None
     st.session_state["overall_report"] = None
     st.session_state["overall_exports"] = None
+
+
+def set_flash_notice(level: str, message: str) -> None:
+    st.session_state["flash_notice"] = {"level": level, "message": message}
+
+
+def render_flash_notice() -> None:
+    notice = st.session_state.pop("flash_notice", None)
+    if not notice:
+        return
+    level = str(notice.get("level", "info"))
+    message = str(notice.get("message", "")).strip()
+    if not message:
+        return
+    getattr(st, level, st.info)(message)
 
 
 def inject_styles() -> None:
@@ -281,6 +313,10 @@ def inject_styles() -> None:
           line-height: 1.65;
         }
 
+        .card strong {
+          color: var(--ink) !important;
+        }
+
         .chip {
           padding: .34rem .65rem;
           background: rgba(255, 255, 255, .86);
@@ -332,6 +368,48 @@ def inject_styles() -> None:
           color: var(--ink-soft) !important;
           font-size: 0.9rem;
           line-height: 1.55;
+        }
+
+        .summary-card {
+          border: 1px solid var(--line);
+          border-radius: 24px;
+          padding: 1rem 1rem 1.05rem;
+          background: rgba(255, 249, 241, 0.96);
+          box-shadow: var(--shadow);
+          min-height: 172px;
+        }
+
+        .summary-card-label {
+          color: var(--ink-faint) !important;
+          font-size: .88rem;
+          font-weight: 700;
+          letter-spacing: .04em;
+          margin-bottom: .5rem;
+        }
+
+        .summary-card-model {
+          color: var(--ink) !important;
+          font-size: 1.2rem;
+          font-weight: 700;
+          line-height: 1.4;
+          margin-bottom: .35rem;
+          word-break: break-word;
+        }
+
+        .summary-card-value {
+          font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+          color: var(--ink) !important;
+          font-size: clamp(1.8rem, 2.3vw, 2.35rem);
+          line-height: 1.08;
+          font-weight: 700;
+          margin-bottom: .4rem;
+          word-break: break-word;
+        }
+
+        .summary-card-meta {
+          color: var(--ink-soft) !important;
+          font-size: .92rem;
+          line-height: 1.6;
         }
 
         div[data-testid="stMetric"] {
@@ -465,6 +543,11 @@ def inject_styles() -> None:
           color: #f4eee9 !important;
         }
 
+        .sidebar-step--done .sidebar-step-index {
+          background: rgba(216, 178, 141, 0.92);
+          color: #322319 !important;
+        }
+
         .sidebar-step-index {
           width: 1.55rem;
           height: 1.55rem;
@@ -476,6 +559,18 @@ def inject_styles() -> None:
           color: #f2d1b4 !important;
           font-size: 0.78rem;
           font-weight: 700;
+        }
+
+        .sidebar-step-copy {
+          flex: 1;
+        }
+
+        .sidebar-step-note {
+          display: block;
+          color: #cfc4bb !important;
+          font-size: 0.78rem;
+          line-height: 1.45;
+          margin-top: 0.12rem;
         }
 
         .sidebar-meta {
@@ -560,15 +655,46 @@ def sample_frame(sample_results: list[dict]) -> pd.DataFrame:
     return frame[ordered].rename(columns=SAMPLE_COLUMN_MAP)
 
 
+def render_summary_cards(cards: list[dict[str, str]]) -> None:
+    cols = st.columns(len(cards), gap="large")
+    for col, card in zip(cols, cards, strict=False):
+        with col:
+            st.markdown(
+                f"""
+                <div class="summary-card">
+                  <div class="summary-card-label">{html.escape(card["label"])}</div>
+                  <div class="summary-card-model">{html.escape(card["model"])}</div>
+                  <div class="summary-card-value">{html.escape(card["value"])}</div>
+                  <div class="summary-card-meta">{html.escape(card["meta"])}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+def merge_uploaded_entries(*groups: Any) -> list[Any]:
+    merged: list[Any] = []
+    seen_names: set[str] = set()
+    for group in groups:
+        if not group:
+            continue
+        entries = group if isinstance(group, list) else [group]
+        for entry in entries:
+            normalized_name = normalize_uploaded_name(getattr(entry, "name", ""))
+            if normalized_name and normalized_name in seen_names:
+                continue
+            if normalized_name:
+                seen_names.add(normalized_name)
+            merged.append(entry)
+    return merged
+
+
 def build_sidecar_transcript_map(uploaded_text_files: list | None) -> dict[str, str]:
     transcript_map: dict[str, str] = {}
     for transcript_file in uploaded_text_files or []:
-        raw = transcript_file.getvalue()
-        try:
-            content = raw.decode("utf-8").strip()
-        except UnicodeDecodeError:
-            content = raw.decode("gbk", errors="ignore").strip()
-        transcript_map[Path(transcript_file.name).stem] = content
+        content = decode_transcript_bytes(transcript_file.getvalue(), suffix=Path(transcript_file.name).suffix)
+        for key in transcript_match_keys(transcript_file.name):
+            transcript_map[key] = content
     return transcript_map
 
 
@@ -597,19 +723,22 @@ def save_uploaded_dataset(uploaded_audio_files: list, transcript_lookup: dict[st
     total = max(len(uploaded_audio_files), 1)
 
     for index, uploaded_audio in enumerate(uploaded_audio_files, start=1):
-        audio_name = Path(uploaded_audio.name).name
-        audio_path = target_dir / audio_name
+        normalized_name = normalize_uploaded_name(uploaded_audio.name)
+        source_path = Path(normalized_name)
+        target_name = source_path.with_suffix(".wav").name
+        audio_path = target_dir / target_name
         if audio_path.exists():
-            audio_path = target_dir / f"{audio_path.stem}_{index:02d}{audio_path.suffix}"
-        status.info(f"正在导入：{audio_path.name}")
-        audio_path.write_bytes(uploaded_audio.getvalue())
-        ref_text = transcript_lookup.get(audio_name, "").strip()
-        duration_sec = read_wave_duration(audio_path)
+            audio_path = target_dir / f"{audio_path.stem}_{index:02d}.wav"
+        status.info(f"正在导入：{source_path.name}")
+        raw_path = target_dir / source_path.name
+        raw_path.write_bytes(uploaded_audio.getvalue())
+        duration_sec = normalize_audio_file(raw_path, audio_path)
+        ref_text = resolve_transcript_text(transcript_lookup, normalized_name).strip()
         if ref_text:
             audio_path.with_suffix(".txt").write_text(ref_text, encoding="utf-8")
         items.append(
             DatasetManifest(
-                sample_id=f"upload_{index:02d}",
+                sample_id=build_sample_id(normalized_name, index),
                 audio_path=str(audio_path),
                 transcript=ref_text,
                 duration_sec=duration_sec,
@@ -679,21 +808,34 @@ def run_evaluation_workflow(
 
 def render_sidebar(history_count: int) -> None:
     dataset_ready = bool(st.session_state["dataset_items"])
-    model_ready = bool(st.session_state["loaded_models"])
-    report_ready = st.session_state["overall_report"] is not None
-    progress_value = (dataset_ready + model_ready + report_ready) / 3
+    workflow = compute_workflow_progress(
+        dataset_ready=dataset_ready,
+        loaded_model_count=len(st.session_state["loaded_models"]),
+        performance_ready=st.session_state["performance_report"] is not None,
+        overall_ready=st.session_state["overall_report"] is not None,
+    )
     with st.sidebar:
         st.markdown("### 评测流程")
-        st.progress(progress_value)
-        st.caption("所有核心功能已经整合到首页，按下面的顺序完成一次完整评测即可。")
+        st.progress(workflow.progress_value)
+        st.caption(f"当前建议继续：{workflow.current_step}")
+        step_notes = (
+            "加载示例数据，或上传音频和参考文本。",
+            "确认模型后端与真实/模拟模式是否符合预期。",
+            "先跑性能测试，再运行总体测试。",
+            "检查结论、样本明细并导出报告。",
+        )
+        step_blocks = []
+        for index, (title, done, note) in enumerate(zip(WORKFLOW_STEP_TITLES, workflow.completed_steps, step_notes, strict=False), start=1):
+            done_class = " sidebar-step--done" if done else ""
+            step_blocks.append(
+                f'<div class="sidebar-step{done_class}"><span class="sidebar-step-index">{index}</span>'
+                f'<span class="sidebar-step-copy">{html.escape(title)}<span class="sidebar-step-note">{html.escape(note)}</span></span></div>'
+            )
         st.markdown(
-            """
+            f"""
             <div class="sidebar-panel">
               <div class="sidebar-title">Recommended Flow</div>
-              <div class="sidebar-step"><span class="sidebar-step-index">1</span><span>导入音频与参考文本</span></div>
-              <div class="sidebar-step"><span class="sidebar-step-index">2</span><span>选择模型并完成加载</span></div>
-              <div class="sidebar-step"><span class="sidebar-step-index">3</span><span>先做性能测试，再跑总体测试</span></div>
-              <div class="sidebar-step"><span class="sidebar-step-index">4</span><span>查看结论并导出报告</span></div>
+              {''.join(step_blocks)}
             </div>
             """,
             unsafe_allow_html=True,
@@ -706,6 +848,7 @@ def render_sidebar(history_count: int) -> None:
               <div class="sidebar-title">Current Status</div>
               <div class="sidebar-meta">数据源：{html.escape(st.session_state["dataset_label"])}</div>
               <div class="sidebar-meta">模型队列：{html.escape(queue_text)}</div>
+              <div class="sidebar-meta">当前阶段：{html.escape(workflow.current_step)}</div>
               <div class="sidebar-meta">历史实验：{history_count} 次</div>
               <div class="sidebar-pill-row">
                 <span class="sidebar-pill">样本 {len(st.session_state["dataset_items"])}</span>
@@ -755,7 +898,11 @@ def render_hero(history_count: int) -> None:
 
 
 def render_dataset_section() -> None:
-    section_header("01 / Dataset", "导入音频文件", "支持一键加载示例音频，也支持上传自己的 WAV 文件并补充参考文本。加载完成后会展示文件名、时长和对应参考文本。")
+    section_header(
+        "01 / Dataset",
+        "导入音频文件",
+        "支持加载示例数据，也支持导入单个文件、多个文件或整个音频文件夹。音频会统一转换为 16k 单声道 WAV；参考文本支持 .txt、.lab、.trn。",
+    )
     left, right = st.columns([1.15, 0.85], gap="large")
 
     with left:
@@ -770,7 +917,8 @@ def render_dataset_section() -> None:
             if issues:
                 st.error("示例数据校验未通过：" + "；".join(issues))
             else:
-                st.success("示例数据已加载，可以继续配置模型。")
+                set_flash_notice("success", "示例数据已加载，可以继续配置模型。")
+                st.rerun()
 
         if clear_col.button("清空数据集", use_container_width=True):
             st.session_state["dataset_items"] = []
@@ -778,45 +926,82 @@ def render_dataset_section() -> None:
             st.session_state["dataset_label"] = "尚未加载数据集"
             st.session_state["dataset_issues"] = []
             reset_reports()
-            st.info("已清空当前数据集。")
+            set_flash_notice("info", "已清空当前数据集。")
+            st.rerun()
 
         submit_uploaded = False
-        uploaded_audio_files = []
+        uploaded_audio_files: list[Any] = []
         with st.form("upload_dataset_form", clear_on_submit=False):
-            uploaded_audio_files = st.file_uploader("上传 WAV 音频文件", type=["wav"], accept_multiple_files=True)
-            uploaded_text_files = st.file_uploader("可选：上传同名 TXT 参考文本", type=["txt"], accept_multiple_files=True)
+            selected_audio_files = st.file_uploader(
+                "上传音频文件",
+                type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
+                accept_multiple_files=True,
+                key="audio-upload-files",
+            )
+            selected_audio_directory = st.file_uploader(
+                "或导入音频文件夹",
+                type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
+                accept_multiple_files="directory",
+                key="audio-upload-directory",
+            )
+            uploaded_audio_files = merge_uploaded_entries(selected_audio_files, selected_audio_directory)
+            uploaded_text_files = merge_uploaded_entries(
+                st.file_uploader(
+                    "可选：上传参考文本文件",
+                    type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
+                    accept_multiple_files=True,
+                    key="text-upload-files",
+                ),
+                st.file_uploader(
+                    "或导入参考文本文件夹",
+                    type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
+                    accept_multiple_files="directory",
+                    key="text-upload-directory",
+                ),
+            )
             transcript_defaults = build_sidecar_transcript_map(uploaded_text_files)
             if uploaded_audio_files:
-                st.caption("请为每个音频填写参考文本，系统会在导入时进行有效性校验。")
+                st.caption("支持批量导入。若上传了同名 .txt/.lab/.trn，系统会自动回填；你也可以继续手动修改。")
                 for audio_file in uploaded_audio_files:
+                    default_text = resolve_transcript_text(transcript_defaults, normalize_uploaded_name(audio_file.name))
                     st.text_area(
                         f"{audio_file.name} 的参考文本",
                         key=f"transcript::{audio_file.name}",
-                        value=transcript_defaults.get(Path(audio_file.name).stem, ""),
+                        value=default_text,
                         height=78,
                     )
             else:
-                st.caption("先选择一个或多个 WAV 文件，再执行导入。")
+                st.caption("先选择一个或多个音频文件，或直接导入整个音频文件夹，再执行导入。")
             submit_uploaded = st.form_submit_button("导入上传音频", use_container_width=True, disabled=not bool(uploaded_audio_files))
 
         if submit_uploaded:
             if not uploaded_audio_files:
-                st.warning("请先选择至少一个 WAV 文件。")
+                st.warning("请先选择至少一个音频文件。")
             else:
                 transcript_lookup = {
-                    Path(audio_file.name).name: st.session_state.get(f"transcript::{audio_file.name}", "").strip()
+                    normalize_uploaded_name(audio_file.name): st.session_state.get(f"transcript::{audio_file.name}", "").strip()
                     for audio_file in uploaded_audio_files
                 }
-                items, issues, batch_name = save_uploaded_dataset(uploaded_audio_files, transcript_lookup)
-                st.session_state["dataset_items"] = items if not issues else []
-                st.session_state["dataset_name"] = batch_name if not issues else ""
-                st.session_state["dataset_label"] = f"上传数据集 / {batch_name}" if not issues else "上传数据集校验失败"
-                st.session_state["dataset_issues"] = issues
-                reset_reports()
-                if issues:
-                    st.error("上传数据校验未通过：" + "；".join(issues))
+                try:
+                    items, issues, batch_name = save_uploaded_dataset(uploaded_audio_files, transcript_lookup)
+                except Exception as exc:
+                    st.session_state["dataset_items"] = []
+                    st.session_state["dataset_name"] = ""
+                    st.session_state["dataset_label"] = "上传数据集导入失败"
+                    st.session_state["dataset_issues"] = [str(exc)]
+                    reset_reports()
+                    st.error(f"导入失败：{exc}")
                 else:
-                    st.success(f"已导入 {len(items)} 个音频样本。")
+                    st.session_state["dataset_items"] = items if not issues else []
+                    st.session_state["dataset_name"] = batch_name if not issues else ""
+                    st.session_state["dataset_label"] = f"上传数据集 / {batch_name}" if not issues else "上传数据集校验失败"
+                    st.session_state["dataset_issues"] = issues
+                    reset_reports()
+                    if issues:
+                        st.error("上传数据校验未通过：" + "；".join(issues))
+                    else:
+                        set_flash_notice("success", f"已导入 {len(items)} 个音频样本。")
+                        st.rerun()
 
     with right:
         issues = st.session_state["dataset_issues"]
@@ -840,13 +1025,13 @@ def render_dataset_section() -> None:
             for item in st.session_state["dataset_items"][:3]:
                 audio_col, text_col = st.columns([0.7, 1.3], gap="large")
                 with audio_col:
-                    st.audio(Path(item.audio_path).read_bytes(), format="audio/wav")
+                    st.audio(Path(item.audio_path).read_bytes(), format=audio_player_format(item.audio_path))
                 with text_col:
                     st.markdown(f"**文件名**：`{Path(item.audio_path).name}`")
                     st.markdown(f"**参考文本**：{item.transcript}")
                     st.caption(f"场景：{item.scene_tag}  |  噪声：{item.noise_tag}  |  时长：{item.duration_sec:.2f}s")
     else:
-        st.info("当前还没有可用于评测的音频数据。可以先加载示例数据，或者上传自己的 WAV 样本。")
+        st.info("当前还没有可用于评测的音频数据。可以先加载示例数据，或者上传自己的音频样本/文件夹。")
 
 
 def render_model_cards() -> None:
@@ -865,11 +1050,15 @@ def render_model_cards() -> None:
                   <p>{html.escape(MODEL_LIBRARY[spec["model_id"]]["desc"])}</p>
                   <div>
                     <span class="chip">设备：{html.escape(spec["device"])}</span>
-                    <span class="chip">模式：{'模拟' if spec['simulate'] else '真实'}</span>
+                    <span class="chip">请求模式：{html.escape(spec["requested_mode"])}</span>
+                    <span class="chip">实际模式：{html.escape(spec["runtime_mode"])}</span>
                     <span class="chip">加载：{spec['load_time_ms']:.2f} ms</span>
                   </div>
-                  <p class="muted">后端：{html.escape(spec["backend"])} / 加载时间：{html.escape(spec["loaded_at"])}</p>
-                  <p class="muted">配置：{html.escape(model_option_summary(spec["options"]))}</p>
+                  <p><strong>后端：</strong>{html.escape(spec["backend"])}</p>
+                  <p><strong>后端详情：</strong>{html.escape(spec.get("backend_detail", "未提供"))}</p>
+                  <p><strong>配置：</strong>{html.escape(model_option_summary(spec["options"]))}</p>
+                  <p class="muted">完成加载时间：{html.escape(spec["loaded_at"])}</p>
+                  {f'<p class="muted">最近错误：{html.escape(spec["load_error"])}</p>' if spec.get("load_error") else ''}
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -893,10 +1082,14 @@ def render_model_section() -> None:
             elif model_id == "rnn_ctc":
                 options = {"hidden_size": st.selectbox("隐藏层规模", ["256", "384", "512"], index=1), "dropout": st.selectbox("Dropout", ["0.1", "0.2", "0.3"], index=1)}
             elif model_id == "faster_whisper":
-                options = {"model_size": st.selectbox("Whisper 规模", ["tiny", "base", "small", "medium"], index=1), "compute_type": st.selectbox("计算精度", ["int8", "float16", "float32"], index=0)}
+                options = {
+                    "model_size": st.selectbox("Whisper 规模", ["tiny", "base", "small", "medium"], index=1),
+                    "compute_type": st.selectbox("计算精度", ["int8", "float16", "float32"], index=0),
+                    "lang": st.selectbox("识别语言", ["zh", "en", "ja"], index=0),
+                }
             else:
                 options = {"lang": st.selectbox("语言", ["zh", "zh_en"], index=0), "postprocess": st.selectbox("后处理", ["punctuation", "raw"], index=0)}
-        st.caption("当前版本中，设备、模拟模式和 Whisper 规模会参与实际加载；其余配置会写入实验备注，便于保留对比上下文。")
+        st.caption("模型加入队列时会立即做一次真实加载校验；界面展示的是实际运行结果，而不是仅展示你的选择。")
 
         action_cols = st.columns(3, gap="small")
         if action_cols[0].button("加载模型到队列", type="primary", use_container_width=True):
@@ -908,36 +1101,49 @@ def render_model_section() -> None:
             adapter = build_model_adapter(model_id, device=device, simulate=simulate, options=options)
             status.info("正在执行加载校验...")
             progress.progress(0.65)
-            adapter.load()
-            metadata = adapter.metadata()
-            progress.progress(1.0)
-            status.empty()
-            progress.empty()
-            st.session_state["loaded_models"][model_id] = {
-                "model_id": model_id,
-                "label": MODEL_LIBRARY[model_id]["label"],
-                "device": device,
-                "simulate": simulate,
-                "options": options,
-                "backend": str(metadata.get("backend", "unknown")),
-                "load_time_ms": float(metadata.get("load_time_ms", 0.0)),
-                "loaded_at": datetime.now().strftime("%H:%M:%S"),
-            }
-            reset_reports()
-            st.success(f"{MODEL_LIBRARY[model_id]['label']} 已加入当前评测队列。")
+            try:
+                adapter.load()
+            except Exception as exc:
+                progress.empty()
+                status.empty()
+                st.error(f"{MODEL_LIBRARY[model_id]['label']} 加载失败：{exc}")
+            else:
+                metadata = adapter.metadata()
+                progress.progress(1.0)
+                status.empty()
+                progress.empty()
+                st.session_state["loaded_models"][model_id] = {
+                    "model_id": model_id,
+                    "label": MODEL_LIBRARY[model_id]["label"],
+                    "device": device,
+                    "requested_mode": "模拟" if simulate else "真实",
+                    "runtime_mode": "模拟" if bool(metadata.get("simulate", True)) else "真实",
+                    "simulate": bool(metadata.get("simulate", True)),
+                    "options": options,
+                    "backend": str(metadata.get("backend", "unknown")),
+                    "backend_detail": str(metadata.get("backend_detail", "")),
+                    "load_error": str(metadata.get("load_error", "")),
+                    "load_time_ms": float(metadata.get("load_time_ms", 0.0)),
+                    "loaded_at": datetime.now().strftime("%H:%M:%S"),
+                }
+                reset_reports()
+                set_flash_notice("success", f"{MODEL_LIBRARY[model_id]['label']} 已加入当前评测队列。")
+                st.rerun()
 
         if action_cols[1].button("移除当前模型", use_container_width=True):
             if model_id in st.session_state["loaded_models"]:
                 st.session_state["loaded_models"].pop(model_id)
                 reset_reports()
-                st.info(f"已移除 {MODEL_LIBRARY[model_id]['label']}。")
+                set_flash_notice("info", f"已移除 {MODEL_LIBRARY[model_id]['label']}。")
+                st.rerun()
             else:
                 st.warning("当前模型还没有加入评测队列。")
 
         if action_cols[2].button("清空模型队列", use_container_width=True):
             st.session_state["loaded_models"] = {}
             reset_reports()
-            st.info("已清空当前模型队列。")
+            set_flash_notice("info", "已清空当前模型队列。")
+            st.rerun()
 
     with right:
         render_model_cards()
@@ -977,11 +1183,29 @@ def render_performance_results(report) -> None:
     fastest = frame.sort_values("avg_latency_ms", ascending=True).iloc[0]
     best_throughput = frame.sort_values("throughput", ascending=False).iloc[0]
     shortest_load = frame.sort_values("load_time_ms", ascending=True).iloc[0]
-    cols = st.columns(3)
-    cols[0].metric("最低平均延迟", f"{fastest['model_label']} / {fastest['avg_latency_ms']:.2f} ms")
-    cols[1].metric("最高吞吐量", f"{best_throughput['model_label']} / {best_throughput['throughput']:.2f}")
-    cols[2].metric("最快加载", f"{shortest_load['model_label']} / {shortest_load['load_time_ms']:.2f} ms")
-    table = frame[["model_label", "load_time_ms", "avg_latency_ms", "p95_latency_ms", "avg_upl_ms", "avg_rtf", "throughput", "cpu_pct", "mem_mb"]]
+    render_summary_cards(
+        [
+            {
+                "label": "最低平均延迟",
+                "model": str(fastest["model_label"]),
+                "value": f"{fastest['avg_latency_ms']:.2f} ms",
+                "meta": f"{fastest['runtime_mode']} / {fastest['backend']}",
+            },
+            {
+                "label": "最高吞吐量",
+                "model": str(best_throughput["model_label"]),
+                "value": f"{best_throughput['throughput']:.2f}",
+                "meta": f"{best_throughput['runtime_mode']} / {best_throughput['backend']}",
+            },
+            {
+                "label": "最快加载",
+                "model": str(shortest_load["model_label"]),
+                "value": f"{shortest_load['load_time_ms']:.2f} ms",
+                "meta": f"{shortest_load['runtime_mode']} / {shortest_load['backend']}",
+            },
+        ]
+    )
+    table = frame[["model_label", "runtime_mode", "backend", "load_time_ms", "avg_latency_ms", "p95_latency_ms", "avg_upl_ms", "avg_rtf", "throughput", "cpu_pct", "mem_mb"]]
     st.dataframe(table.rename(columns=SUMMARY_COLUMN_MAP), use_container_width=True, hide_index=True)
 
 
@@ -1007,7 +1231,8 @@ def render_evaluation_section() -> None:
                     export_bundle=False,
                 )
             st.session_state["performance_report"] = report
-            st.success("性能测试完成。")
+            set_flash_notice("success", "性能测试完成。")
+            st.rerun()
         if st.session_state["performance_report"] is not None:
             render_performance_results(st.session_state["performance_report"])
         elif not ready:
@@ -1026,7 +1251,8 @@ def render_evaluation_section() -> None:
                 )
             st.session_state["overall_report"] = report
             st.session_state["overall_exports"] = exports
-            st.success(f"总体测试完成，实验 ID：{report.experiment_id}")
+            set_flash_notice("success", f"总体测试完成，实验 ID：{report.experiment_id}")
+            st.rerun()
         if st.session_state["overall_report"] is not None:
             st.dataframe(summary_frame(st.session_state["overall_report"].summary), use_container_width=True, hide_index=True)
             if st.session_state["overall_exports"]:
@@ -1048,10 +1274,28 @@ def render_results_section() -> None:
     best_uss = frame.sort_values("uss", ascending=False).iloc[0]
     best_cer = frame.sort_values("cer", ascending=True).iloc[0]
     fastest = frame.sort_values("avg_latency_ms", ascending=True).iloc[0]
-    cols = st.columns(3)
-    cols[0].metric("综合最优", f"{best_uss['model_label']} / {best_uss['uss']:.2f}")
-    cols[1].metric("最低 CER", f"{best_cer['model_label']} / {best_cer['cer']:.4f}")
-    cols[2].metric("最快延迟", f"{fastest['model_label']} / {fastest['avg_latency_ms']:.2f} ms")
+    render_summary_cards(
+        [
+            {
+                "label": "综合最优",
+                "model": str(best_uss["model_label"]),
+                "value": f"{best_uss['uss']:.2f}",
+                "meta": f"{best_uss['runtime_mode']} / {best_uss['backend']}",
+            },
+            {
+                "label": "最低 CER",
+                "model": str(best_cer["model_label"]),
+                "value": f"{best_cer['cer']:.4f}",
+                "meta": f"{best_cer['runtime_mode']} / {best_cer['backend']}",
+            },
+            {
+                "label": "最快延迟",
+                "model": str(fastest["model_label"]),
+                "value": f"{fastest['avg_latency_ms']:.2f} ms",
+                "meta": f"{fastest['runtime_mode']} / {fastest['backend']}",
+            },
+        ]
+    )
     st.markdown(
         f"""
         <div class="insight">
@@ -1099,6 +1343,7 @@ def main() -> None:
     history_count = len(list_saved_experiments())
     render_sidebar(history_count)
     render_hero(history_count)
+    render_flash_notice()
     render_dataset_section()
     st.divider()
     render_model_section()

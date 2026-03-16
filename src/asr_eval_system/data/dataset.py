@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from asr_eval_system.data.audio_utils import read_wave_duration
+from asr_eval_system.data.audio_utils import find_sidecar_transcript, read_audio_duration
 from asr_eval_system.schemas import DatasetManifest
 
 
@@ -48,11 +48,12 @@ def validate_manifest(items: list[DatasetManifest]) -> list[str]:
             issues.append(f"音频文件不存在: {item.audio_path}")
             continue
 
-        if item.duration_sec <= 0 and path.suffix.lower() == ".wav":
-            item.duration_sec = read_wave_duration(path)
+        if item.duration_sec <= 0:
+            item.duration_sec = read_audio_duration(path)
         if item.duration_sec <= 0:
             issues.append(f"样本时长无效: {item.sample_id}")
         if not item.transcript.strip():
+            item.transcript = find_sidecar_transcript(path) or ""
+        if not item.transcript.strip():
             issues.append(f"样本文本为空: {item.sample_id}")
     return issues
-
