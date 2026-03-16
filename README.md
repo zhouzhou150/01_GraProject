@@ -3,7 +3,7 @@
 这是一个面向毕业设计/课程项目的 ASR 多模型评测系统，提供：
 
 - 示例数据集生成与导入
-- 单文件、多文件、文件夹批量导入音频
+- 单文件、多文件、文件夹、ZIP 压缩包批量导入音频
 - `.txt`、`.lab`、`.trn` 参考文本匹配
 - 多模型加载、性能测试、总体测试
 - JSON / CSV / Markdown 报告导出
@@ -64,6 +64,19 @@ conda activate asr-eval311
 Set-Location F:\01_GraProject
 python scripts/generate_demo_dataset.py
 ```
+
+如果需要下载一个更接近真实批量导入场景的小型公开数据集：
+
+```powershell
+conda activate asr-eval311
+Set-Location F:\01_GraProject
+python scripts/download_yesno_dataset.py
+```
+
+下载完成后，数据会放在：
+
+- `data/external/yesno/waves_yesno/`
+- 清单文件：`data/manifests/yesno_manifest.json`
 
 ## 常用检查命令
 

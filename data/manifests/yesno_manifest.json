@@ -1,0 +1,602 @@
+[
+  {
+    "sample_id": "0_0_0_0_1_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_0_1_1_1_1.wav",
+    "transcript": "no no no no yes yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_0_1_0_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_1_0_0_0_1.wav",
+    "transcript": "no no no yes no no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_0_1_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_1_0_1_1_0.wav",
+    "transcript": "no no no yes no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_0_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_0_1_0.wav",
+    "transcript": "no no yes no no no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_1_1_0.wav",
+    "transcript": "no no yes no no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_1_1_1.wav",
+    "transcript": "no no yes no no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_1_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_0_0.wav",
+    "transcript": "no no yes no yes no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_1_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_0_1.wav",
+    "transcript": "no no yes no yes no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_0_1_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_1_1.wav",
+    "transcript": "no no yes no yes no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_0_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_0_0_0_1.wav",
+    "transcript": "no no yes yes no no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_0_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_0_1_0_0.wav",
+    "transcript": "no no yes yes no yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_0_1_1_0.wav",
+    "transcript": "no no yes yes no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_0_1_1_1.wav",
+    "transcript": "no no yes yes no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_1_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_1_0_0_0.wav",
+    "transcript": "no no yes yes yes no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_1_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_1_0_0_1.wav",
+    "transcript": "no no yes yes yes no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_1_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_1_1_0_0.wav",
+    "transcript": "no no yes yes yes yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_0_1_1_1_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_1_1_1_0.wav",
+    "transcript": "no no yes yes yes yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_0_0_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_0_0_1_0_0.wav",
+    "transcript": "no yes no no no yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_0_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_0_0_1_1_0.wav",
+    "transcript": "no yes no no no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_0_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_0_1_0_1_0.wav",
+    "transcript": "no yes no no yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_0_1_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_0_1_0_1_1.wav",
+    "transcript": "no yes no no yes no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_1_0_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_1_0_0_0_0.wav",
+    "transcript": "no yes no yes no no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_1_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_1_1_0_1_0.wav",
+    "transcript": "no yes no yes yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_0_1_1_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_0_1_1_1_0_0.wav",
+    "transcript": "no yes no yes yes yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_0_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_0_0_1_1_0.wav",
+    "transcript": "no yes yes no no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_0_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_0_0_1_1_1.wav",
+    "transcript": "no yes yes no no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_1_0_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_1_0_0_0_0.wav",
+    "transcript": "no yes yes yes no no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_1_0_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_1_0_0_1_0.wav",
+    "transcript": "no yes yes yes no no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_1_0_1_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_1_0_1_0_1.wav",
+    "transcript": "no yes yes yes no yes no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_1_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_1_1_0_1_0.wav",
+    "transcript": "no yes yes yes yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "0_1_1_1_1_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_1_1_1_1_1_1_1.wav",
+    "transcript": "no yes yes yes yes yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_0_0_0_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_0_0_0_0_0_0.wav",
+    "transcript": "yes no no no no no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_0_0_0_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_0_0_0_0_0_1.wav",
+    "transcript": "yes no no no no no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_0_0_0_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_0_0_0_0_1_1.wav",
+    "transcript": "yes no no no no no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_0_0_1_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_0_0_1_0_0_1.wav",
+    "transcript": "yes no no no yes no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_0_1_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_0_1_0_1_1_1.wav",
+    "transcript": "yes no no yes no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_1_0_1_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_1_0_1_0_0_1.wav",
+    "transcript": "yes no yes no yes no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_1_1_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_1_1_0_1_1_1.wav",
+    "transcript": "yes no yes yes no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_1_1_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_1_1_1_0_1_0.wav",
+    "transcript": "yes no yes yes yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_0_1_1_1_1_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_0_1_1_1_1_0_1.wav",
+    "transcript": "yes no yes yes yes yes no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_0_0_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_0_0_0_0_1.wav",
+    "transcript": "yes yes no no no no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_0_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_0_0_1_1_1.wav",
+    "transcript": "yes yes no no no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_0_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_0_1_0_1_0.wav",
+    "transcript": "yes yes no no yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_0_1_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_0_1_0_1_1.wav",
+    "transcript": "yes yes no no yes no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_0_1_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_0_1_1_1_0.wav",
+    "transcript": "yes yes no no yes yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_1_0_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_1_0_1_0_0.wav",
+    "transcript": "yes yes no yes no yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_1_0_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_1_0_1_1_0.wav",
+    "transcript": "yes yes no yes no yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_1_1_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_1_1_0_0_1.wav",
+    "transcript": "yes yes no yes yes no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_1_1_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_1_1_0_1_1.wav",
+    "transcript": "yes yes no yes yes no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_0_1_1_1_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_0_1_1_1_1_0.wav",
+    "transcript": "yes yes no yes yes yes yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_0_0_0_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_0_0_0_0_1.wav",
+    "transcript": "yes yes yes no no no no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_0_0_1_0_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_0_0_1_0_1.wav",
+    "transcript": "yes yes yes no no yes no yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_0_0_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_0_0_1_1_1.wav",
+    "transcript": "yes yes yes no no yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_0_1_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_0_1_0_1_0.wav",
+    "transcript": "yes yes yes no yes no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_0_1_0_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_0_1_0_1_1.wav",
+    "transcript": "yes yes yes no yes no yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_1_0_0_1_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_1_0_0_1_0.wav",
+    "transcript": "yes yes yes yes no no yes no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_1_0_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_1_0_1_0_0.wav",
+    "transcript": "yes yes yes yes no yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_1_1_0_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_1_1_0_0_0.wav",
+    "transcript": "yes yes yes yes yes no no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_1_1_1_0_0",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_1_1_1_0_0.wav",
+    "transcript": "yes yes yes yes yes yes no no",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  },
+  {
+    "sample_id": "1_1_1_1_1_1_1_1",
+    "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\1_1_1_1_1_1_1_1.wav",
+    "transcript": "yes yes yes yes yes yes yes yes",
+    "duration_sec": 0,
+    "split": "test",
+    "scene_tag": "yesno",
+    "noise_tag": "clean",
+    "accent_tag": "english"
+  }
+]

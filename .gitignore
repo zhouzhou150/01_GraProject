@@ -9,6 +9,7 @@ build/
 *.egg-info/
 .streamlit/
 data/runtime/
+data/external/
 data/reports/*.json
 data/reports/*.csv
 data/reports/*.md

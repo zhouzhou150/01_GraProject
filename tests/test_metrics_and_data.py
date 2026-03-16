@@ -1,13 +1,23 @@
+import io
 import json
 import sys
 import tempfile
 import unittest
 import wave
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from asr_eval_system.data.audio_utils import build_sample_id, decode_transcript_bytes, resolve_transcript_text, transcript_match_keys
+from asr_eval_system.data.audio_utils import (
+    SUPPORTED_AUDIO_EXTENSIONS,
+    BufferedUpload,
+    build_sample_id,
+    decode_transcript_bytes,
+    expand_uploaded_archives,
+    resolve_transcript_text,
+    transcript_match_keys,
+)
 from asr_eval_system.data.dataset import load_manifest, validate_manifest
 from asr_eval_system.metrics.satisfaction import build_satisfaction_profile, compute_uss
 from asr_eval_system.metrics.text_metrics import cer, semdist_score, ser, wer
@@ -75,6 +85,20 @@ class MetricsAndDataTests(unittest.TestCase):
             transcript_map[key] = decode_transcript_bytes("你好 世界\nmetadata".encode("utf-8"), suffix=".trn")
         self.assertEqual(resolve_transcript_text(transcript_map, "folder/A2_1.wav"), "你好 世界")
         self.assertEqual(build_sample_id("folder/A2_1.wav", 1), "folder_A2_1")
+
+    def test_expand_uploaded_archives_supports_zip_batches(self) -> None:
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, "w") as archive:
+            archive.writestr("batch/A2_0.wav", b"RIFF")
+            archive.writestr("batch/ignore.txt", b"skip")
+
+        uploads, issues = expand_uploaded_archives(
+            [BufferedUpload(name="audio_bundle.zip", data=payload.getvalue())],
+            SUPPORTED_AUDIO_EXTENSIONS,
+        )
+        self.assertEqual(issues, [])
+        self.assertEqual(len(uploads), 1)
+        self.assertEqual(uploads[0].name, "batch/A2_0.wav")
 
     def test_workflow_progress_is_sequential(self) -> None:
         progress = compute_workflow_progress(dataset_ready=False, loaded_model_count=2, performance_ready=True, overall_ready=True)

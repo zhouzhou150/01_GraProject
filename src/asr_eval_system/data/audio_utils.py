@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
+import io
 import re
 import wave
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +13,15 @@ import numpy as np
 
 SUPPORTED_AUDIO_EXTENSIONS = (".wav", ".mp3", ".flac", ".m4a", ".ogg", ".opus", ".aac", ".wma")
 SUPPORTED_TRANSCRIPT_EXTENSIONS = (".txt", ".lab", ".trn")
+
+
+@dataclass(slots=True)
+class BufferedUpload:
+    name: str
+    data: bytes
+
+    def getvalue(self) -> bytes:
+        return self.data
 
 
 def normalize_uploaded_name(name: str) -> str:
@@ -30,6 +42,38 @@ def decode_transcript_bytes(raw: bytes, suffix: str = "") -> str:
         except UnicodeDecodeError:
             continue
     return extract_transcript_text(raw.decode("utf-8", errors="ignore"), suffix=suffix)
+
+
+def expand_uploaded_archives(
+    uploaded_archives: list | None,
+    allowed_suffixes: tuple[str, ...],
+) -> tuple[list[BufferedUpload], list[str]]:
+    expanded: list[BufferedUpload] = []
+    issues: list[str] = []
+    allowed = {suffix.lower() for suffix in allowed_suffixes}
+
+    for archive in uploaded_archives or []:
+        try:
+            with zipfile.ZipFile(io.BytesIO(archive.getvalue())) as bundle:
+                matched = 0
+                for member in bundle.infolist():
+                    if member.is_dir():
+                        continue
+                    member_name = normalize_uploaded_name(member.filename)
+                    if not member_name:
+                        continue
+                    if Path(member_name).suffix.lower() not in allowed:
+                        continue
+                    expanded.append(BufferedUpload(name=member_name, data=bundle.read(member)))
+                    matched += 1
+        except zipfile.BadZipFile:
+            issues.append(f"压缩包无法解析：{getattr(archive, 'name', 'unknown.zip')}")
+            continue
+
+        if matched == 0:
+            issues.append(f"压缩包中没有可导入的目标文件：{getattr(archive, 'name', 'unknown.zip')}")
+
+    return expanded, issues
 
 
 def transcript_match_keys(file_name: str) -> set[str]:

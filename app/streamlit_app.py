@@ -24,6 +24,7 @@ from asr_eval_system.data.audio_utils import (
     audio_player_format,
     build_sample_id,
     decode_transcript_bytes,
+    expand_uploaded_archives,
     normalize_audio_file,
     normalize_uploaded_name,
     resolve_transcript_text,
@@ -143,6 +144,7 @@ for key, value in {
     "overall_report": None,
     "overall_exports": None,
     "flash_notice": None,
+    "upload_widget_nonce": 0,
 }.items():
     st.session_state.setdefault(key, value)
 
@@ -166,6 +168,13 @@ def render_flash_notice() -> None:
     if not message:
         return
     getattr(st, level, st.info)(message)
+
+
+def clear_upload_selection() -> None:
+    st.session_state["upload_widget_nonce"] = int(st.session_state.get("upload_widget_nonce", 0)) + 1
+    for key in list(st.session_state.keys()):
+        if key.startswith("transcript::"):
+            del st.session_state[key]
 
 
 def inject_styles() -> None:
@@ -784,6 +793,7 @@ def run_evaluation_workflow(
                     "device": spec["device"],
                     "simulate": spec["simulate"],
                     "options": spec["options"],
+                    "sample_limit": sample_limit,
                 }
                 for spec in model_specs
             ],
@@ -913,6 +923,7 @@ def render_dataset_section() -> None:
             st.session_state["dataset_name"] = "demo_manifest" if not issues else ""
             st.session_state["dataset_label"] = "示例数据集 / demo_manifest.json" if not issues else "示例数据集加载失败"
             st.session_state["dataset_issues"] = issues
+            clear_upload_selection()
             reset_reports()
             if issues:
                 st.error("示例数据校验未通过：" + "；".join(issues))
@@ -925,61 +936,127 @@ def render_dataset_section() -> None:
             st.session_state["dataset_name"] = ""
             st.session_state["dataset_label"] = "尚未加载数据集"
             st.session_state["dataset_issues"] = []
+            clear_upload_selection()
             reset_reports()
             set_flash_notice("info", "已清空当前数据集。")
             st.rerun()
 
-        submit_uploaded = False
-        uploaded_audio_files: list[Any] = []
-        with st.form("upload_dataset_form", clear_on_submit=False):
-            selected_audio_files = st.file_uploader(
-                "上传音频文件",
-                type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
-                accept_multiple_files=True,
-                key="audio-upload-files",
-            )
-            selected_audio_directory = st.file_uploader(
-                "或导入音频文件夹",
-                type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
-                accept_multiple_files="directory",
-                key="audio-upload-directory",
-            )
-            uploaded_audio_files = merge_uploaded_entries(selected_audio_files, selected_audio_directory)
-            uploaded_text_files = merge_uploaded_entries(
-                st.file_uploader(
-                    "可选：上传参考文本文件",
-                    type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
-                    accept_multiple_files=True,
-                    key="text-upload-files",
-                ),
-                st.file_uploader(
-                    "或导入参考文本文件夹",
-                    type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
-                    accept_multiple_files="directory",
-                    key="text-upload-directory",
-                ),
-            )
-            transcript_defaults = build_sidecar_transcript_map(uploaded_text_files)
-            if uploaded_audio_files:
-                st.caption("支持批量导入。若上传了同名 .txt/.lab/.trn，系统会自动回填；你也可以继续手动修改。")
-                for audio_file in uploaded_audio_files:
-                    default_text = resolve_transcript_text(transcript_defaults, normalize_uploaded_name(audio_file.name))
-                    st.text_area(
-                        f"{audio_file.name} 的参考文本",
-                        key=f"transcript::{audio_file.name}",
-                        value=default_text,
-                        height=78,
+        upload_nonce = int(st.session_state["upload_widget_nonce"])
+        selected_audio_files = st.file_uploader(
+            "上传音频文件",
+            type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
+            accept_multiple_files=True,
+            key=f"audio-upload-files-{upload_nonce}",
+        )
+        selected_audio_directory = st.file_uploader(
+            "或导入音频文件夹",
+            type=[suffix.lstrip(".") for suffix in SUPPORTED_AUDIO_EXTENSIONS],
+            accept_multiple_files="directory",
+            key=f"audio-upload-directory-{upload_nonce}",
+        )
+        selected_audio_archives = st.file_uploader(
+            "或上传音频 ZIP 压缩包",
+            type=["zip"],
+            accept_multiple_files=True,
+            key=f"audio-upload-archives-{upload_nonce}",
+        )
+        archived_audio_files, audio_archive_issues = expand_uploaded_archives(
+            selected_audio_archives,
+            SUPPORTED_AUDIO_EXTENSIONS,
+        )
+
+        selected_text_files = st.file_uploader(
+            "可选：上传参考文本文件",
+            type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
+            accept_multiple_files=True,
+            key=f"text-upload-files-{upload_nonce}",
+        )
+        selected_text_directory = st.file_uploader(
+            "或导入参考文本文件夹",
+            type=[suffix.lstrip(".") for suffix in SUPPORTED_TRANSCRIPT_EXTENSIONS],
+            accept_multiple_files="directory",
+            key=f"text-upload-directory-{upload_nonce}",
+        )
+        selected_text_archives = st.file_uploader(
+            "或上传参考文本 ZIP 压缩包",
+            type=["zip"],
+            accept_multiple_files=True,
+            key=f"text-upload-archives-{upload_nonce}",
+        )
+        archived_text_files, text_archive_issues = expand_uploaded_archives(
+            selected_text_archives,
+            SUPPORTED_TRANSCRIPT_EXTENSIONS,
+        )
+
+        uploaded_audio_files = merge_uploaded_entries(
+            selected_audio_files,
+            selected_audio_directory,
+            archived_audio_files,
+        )
+        uploaded_text_files = merge_uploaded_entries(
+            selected_text_files,
+            selected_text_directory,
+            archived_text_files,
+        )
+        transcript_defaults = build_sidecar_transcript_map(uploaded_text_files)
+
+        for issue in [*audio_archive_issues, *text_archive_issues]:
+            st.warning(issue)
+
+        if selected_audio_directory or selected_text_directory:
+            st.caption("如果目录上传时出现大量 Network Error，建议改用 ZIP 压缩包批量导入，稳定性会更好。")
+
+        if uploaded_audio_files:
+            st.caption("支持批量导入。若上传了同名 .txt/.lab/.trn，系统会自动回填；你也可以继续手动修改。")
+            for audio_file in uploaded_audio_files:
+                transcript_key = f"transcript::{upload_nonce}::{audio_file.name}"
+                if transcript_key not in st.session_state:
+                    st.session_state[transcript_key] = resolve_transcript_text(
+                        transcript_defaults,
+                        normalize_uploaded_name(audio_file.name),
                     )
-            else:
-                st.caption("先选择一个或多个音频文件，或直接导入整个音频文件夹，再执行导入。")
-            submit_uploaded = st.form_submit_button("导入上传音频", use_container_width=True, disabled=not bool(uploaded_audio_files))
+                st.text_area(
+                    f"{audio_file.name} 的参考文本",
+                    key=transcript_key,
+                    height=78,
+                )
+        else:
+            st.caption("先选择一个或多个音频文件，或直接导入整个音频文件夹，再执行导入。")
+
+        upload_has_selection = bool(
+            selected_audio_files
+            or selected_audio_directory
+            or selected_audio_archives
+            or selected_text_files
+            or selected_text_directory
+            or selected_text_archives
+        )
+        upload_action_cols = st.columns([0.68, 0.32], gap="small")
+        submit_uploaded = upload_action_cols[0].button(
+            "导入上传音频",
+            use_container_width=True,
+            disabled=not bool(uploaded_audio_files),
+        )
+        clear_selected_uploads = upload_action_cols[1].button(
+            "清空已选文件",
+            use_container_width=True,
+            disabled=not upload_has_selection,
+        )
+
+        if clear_selected_uploads:
+            clear_upload_selection()
+            set_flash_notice("info", "已清空当前上传选择。")
+            st.rerun()
 
         if submit_uploaded:
             if not uploaded_audio_files:
                 st.warning("请先选择至少一个音频文件。")
             else:
                 transcript_lookup = {
-                    normalize_uploaded_name(audio_file.name): st.session_state.get(f"transcript::{audio_file.name}", "").strip()
+                    normalize_uploaded_name(audio_file.name): st.session_state.get(
+                        f"transcript::{upload_nonce}::{audio_file.name}",
+                        "",
+                    ).strip()
                     for audio_file in uploaded_audio_files
                 }
                 try:
@@ -1000,6 +1077,7 @@ def render_dataset_section() -> None:
                     if issues:
                         st.error("上传数据校验未通过：" + "；".join(issues))
                     else:
+                        clear_upload_selection()
                         set_flash_notice("success", f"已导入 {len(items)} 个音频样本。")
                         st.rerun()
 
@@ -1239,7 +1317,21 @@ def render_evaluation_section() -> None:
             st.info("先完成数据导入和模型加载，性能测试按钮才会解锁。")
 
     with tabs[1]:
-        st.caption("总体测试会对当前数据集中的全部样本运行完整评估，并自动生成 JSON / CSV / Markdown 报告。")
+        if st.session_state["dataset_items"]:
+            overall_sample_limit = st.slider(
+                "总体测试样本数",
+                min_value=1,
+                max_value=len(st.session_state["dataset_items"]),
+                value=len(st.session_state["dataset_items"]),
+                key="overall-sample-limit",
+            )
+            if overall_sample_limit < len(st.session_state["dataset_items"]):
+                st.caption(f"当前仅对前 {overall_sample_limit} 条样本运行总体测试，适合大批量数据导入后的调试。")
+            else:
+                st.caption("当前会对数据集中的全部样本运行总体测试，并自动生成 JSON / CSV / Markdown 报告。")
+        else:
+            overall_sample_limit = 1
+            st.caption("加载数据集后才能配置总体测试样本数。")
         if st.button("运行总体测试并导出", key="run-overall", type="primary", disabled=not ready):
             with st.spinner("正在执行总体测试并生成导出文件，请稍候..."):
                 report, exports = run_evaluation_workflow(
@@ -1247,6 +1339,7 @@ def render_evaluation_section() -> None:
                     dataset_name=st.session_state["dataset_name"] or "temporary_dataset",
                     model_specs=list(st.session_state["loaded_models"].values()),
                     experiment_prefix="eval",
+                    sample_limit=overall_sample_limit,
                     export_bundle=True,
                 )
             st.session_state["overall_report"] = report
