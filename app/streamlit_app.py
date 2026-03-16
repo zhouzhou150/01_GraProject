@@ -917,7 +917,7 @@ def render_dataset_section() -> None:
 
     with left:
         quick_col, clear_col = st.columns([0.7, 0.3], gap="small")
-        if quick_col.button("加载示例数据", type="primary", use_container_width=True):
+        if quick_col.button("加载示例数据", type="primary", width="stretch"):
             items, issues = load_demo_dataset_with_progress()
             st.session_state["dataset_items"] = items if not issues else []
             st.session_state["dataset_name"] = "demo_manifest" if not issues else ""
@@ -931,7 +931,7 @@ def render_dataset_section() -> None:
                 set_flash_notice("success", "示例数据已加载，可以继续配置模型。")
                 st.rerun()
 
-        if clear_col.button("清空数据集", use_container_width=True):
+        if clear_col.button("清空数据集", width="stretch"):
             st.session_state["dataset_items"] = []
             st.session_state["dataset_name"] = ""
             st.session_state["dataset_label"] = "尚未加载数据集"
@@ -1010,11 +1010,14 @@ def render_dataset_section() -> None:
             st.caption("支持批量导入。若上传了同名 .txt/.lab/.trn，系统会自动回填；你也可以继续手动修改。")
             for audio_file in uploaded_audio_files:
                 transcript_key = f"transcript::{upload_nonce}::{audio_file.name}"
+                default_text = resolve_transcript_text(
+                    transcript_defaults,
+                    normalize_uploaded_name(audio_file.name),
+                )
                 if transcript_key not in st.session_state:
-                    st.session_state[transcript_key] = resolve_transcript_text(
-                        transcript_defaults,
-                        normalize_uploaded_name(audio_file.name),
-                    )
+                    st.session_state[transcript_key] = default_text
+                elif default_text and not str(st.session_state.get(transcript_key, "")).strip():
+                    st.session_state[transcript_key] = default_text
                 st.text_area(
                     f"{audio_file.name} 的参考文本",
                     key=transcript_key,
@@ -1034,12 +1037,12 @@ def render_dataset_section() -> None:
         upload_action_cols = st.columns([0.68, 0.32], gap="small")
         submit_uploaded = upload_action_cols[0].button(
             "导入上传音频",
-            use_container_width=True,
+            width="stretch",
             disabled=not bool(uploaded_audio_files),
         )
         clear_selected_uploads = upload_action_cols[1].button(
             "清空已选文件",
-            use_container_width=True,
+            width="stretch",
             disabled=not upload_has_selection,
         )
 
@@ -1098,7 +1101,7 @@ def render_dataset_section() -> None:
         )
 
     if st.session_state["dataset_items"]:
-        st.dataframe(dataset_preview_frame(st.session_state["dataset_items"]), use_container_width=True, hide_index=True)
+        st.dataframe(dataset_preview_frame(st.session_state["dataset_items"]), width="stretch", hide_index=True)
         with st.expander("试听与文本预览", expanded=False):
             for item in st.session_state["dataset_items"][:3]:
                 audio_col, text_col = st.columns([0.7, 1.3], gap="large")
@@ -1170,7 +1173,7 @@ def render_model_section() -> None:
         st.caption("模型加入队列时会立即做一次真实加载校验；界面展示的是实际运行结果，而不是仅展示你的选择。")
 
         action_cols = st.columns(3, gap="small")
-        if action_cols[0].button("加载模型到队列", type="primary", use_container_width=True):
+        if action_cols[0].button("加载模型到队列", type="primary", width="stretch"):
             progress = st.progress(0)
             status = st.empty()
             status.info("正在初始化模型配置...")
@@ -1208,7 +1211,7 @@ def render_model_section() -> None:
                 set_flash_notice("success", f"{MODEL_LIBRARY[model_id]['label']} 已加入当前评测队列。")
                 st.rerun()
 
-        if action_cols[1].button("移除当前模型", use_container_width=True):
+        if action_cols[1].button("移除当前模型", width="stretch"):
             if model_id in st.session_state["loaded_models"]:
                 st.session_state["loaded_models"].pop(model_id)
                 reset_reports()
@@ -1217,7 +1220,7 @@ def render_model_section() -> None:
             else:
                 st.warning("当前模型还没有加入评测队列。")
 
-        if action_cols[2].button("清空模型队列", use_container_width=True):
+        if action_cols[2].button("清空模型队列", width="stretch"):
             st.session_state["loaded_models"] = {}
             reset_reports()
             set_flash_notice("info", "已清空当前模型队列。")
@@ -1235,7 +1238,7 @@ def render_metric_chart(container, frame: pd.DataFrame, spec: dict[str, str]) ->
     with container:
         st.markdown(f'<div class="chart-card"><h4 class="chart-title">{html.escape(label)}</h4><p class="chart-hint">{html.escape(hint)}</p></div>', unsafe_allow_html=True)
         if alt is None:  # pragma: no cover
-            st.bar_chart(chart_data.set_index("模型"), use_container_width=True)
+            st.bar_chart(chart_data.set_index("模型"), width="stretch")
             return
         bar = (
             alt.Chart(chart_data)
@@ -1249,7 +1252,7 @@ def render_metric_chart(container, frame: pd.DataFrame, spec: dict[str, str]) ->
             .properties(height=250)
         )
         text = bar.mark_text(dy=-12, color="#2a211c", fontSize=12).encode(text=alt.Text(f"{label}:Q", format=fmt))
-        st.altair_chart(bar + text, use_container_width=True)
+        st.altair_chart(bar + text, width="stretch")
 
 
 def render_performance_results(report) -> None:
@@ -1284,7 +1287,7 @@ def render_performance_results(report) -> None:
         ]
     )
     table = frame[["model_label", "runtime_mode", "backend", "load_time_ms", "avg_latency_ms", "p95_latency_ms", "avg_upl_ms", "avg_rtf", "throughput", "cpu_pct", "mem_mb"]]
-    st.dataframe(table.rename(columns=SUMMARY_COLUMN_MAP), use_container_width=True, hide_index=True)
+    st.dataframe(table.rename(columns=SUMMARY_COLUMN_MAP), width="stretch", hide_index=True)
 
 
 def render_evaluation_section() -> None:
@@ -1309,8 +1312,7 @@ def render_evaluation_section() -> None:
                     export_bundle=False,
                 )
             st.session_state["performance_report"] = report
-            set_flash_notice("success", "性能测试完成。")
-            st.rerun()
+            st.success("性能测试完成。")
         if st.session_state["performance_report"] is not None:
             render_performance_results(st.session_state["performance_report"])
         elif not ready:
@@ -1344,10 +1346,9 @@ def render_evaluation_section() -> None:
                 )
             st.session_state["overall_report"] = report
             st.session_state["overall_exports"] = exports
-            set_flash_notice("success", f"总体测试完成，实验 ID：{report.experiment_id}")
-            st.rerun()
+            st.success(f"总体测试完成，实验 ID：{report.experiment_id}")
         if st.session_state["overall_report"] is not None:
-            st.dataframe(summary_frame(st.session_state["overall_report"].summary), use_container_width=True, hide_index=True)
+            st.dataframe(summary_frame(st.session_state["overall_report"].summary), width="stretch", hide_index=True)
             if st.session_state["overall_exports"]:
                 exports = st.session_state["overall_exports"]
                 st.caption(f"已导出：JSON `{Path(exports['json']).name}` / CSV `{Path(exports['csv']).name}` / Markdown `{Path(exports['markdown']).name}`")
@@ -1402,15 +1403,15 @@ def render_results_section() -> None:
     )
     if exports:
         dcols = st.columns(3)
-        dcols[0].download_button("下载 JSON 报告", data=Path(exports["json"]).read_bytes(), file_name=Path(exports["json"]).name, mime="application/json", use_container_width=True)
-        dcols[1].download_button("下载 CSV 摘要", data=Path(exports["csv"]).read_bytes(), file_name=Path(exports["csv"]).name, mime="text/csv", use_container_width=True)
-        dcols[2].download_button("下载 Markdown 报告", data=Path(exports["markdown"]).read_bytes(), file_name=Path(exports["markdown"]).name, mime="text/markdown", use_container_width=True)
+        dcols[0].download_button("下载 JSON 报告", data=Path(exports["json"]).read_bytes(), file_name=Path(exports["json"]).name, mime="application/json", width="stretch")
+        dcols[1].download_button("下载 CSV 摘要", data=Path(exports["csv"]).read_bytes(), file_name=Path(exports["csv"]).name, mime="text/csv", width="stretch")
+        dcols[2].download_button("下载 Markdown 报告", data=Path(exports["markdown"]).read_bytes(), file_name=Path(exports["markdown"]).name, mime="text/markdown", width="stretch")
     with st.expander("查看逐样本识别结果", expanded=False):
-        st.dataframe(sample_frame(report.sample_results), use_container_width=True, hide_index=True)
+        st.dataframe(sample_frame(report.sample_results), width="stretch", hide_index=True)
     history = list_saved_experiments()
     if history:
         with st.expander("历史实验记录", expanded=False):
-            st.dataframe(pd.DataFrame(history), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(history), width="stretch", hide_index=True)
 
 
 def render_chart_section() -> None:

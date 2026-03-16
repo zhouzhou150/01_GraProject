@@ -20,7 +20,7 @@ class ModelAdapter(ABC):
     def load(self) -> None:
         raise NotImplementedError
 
-    def warmup(self) -> None:
+    def warmup(self, audio_path: str | None = None) -> None:
         return None
 
     @abstractmethod

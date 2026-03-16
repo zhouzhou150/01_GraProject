@@ -65,6 +65,13 @@ class PaddleSpeechAdapter(ModelAdapter):
             return str(result).strip()
         return build_simulated_prediction(audio_path, error_rate=0.09, seed_bias=41)
 
+    def warmup(self, audio_path: str | None = None) -> None:
+        if self.simulate or not audio_path:
+            return
+        start = time.perf_counter()
+        self.transcribe(audio_path)
+        self.load_time_ms = round(self.load_time_ms + (time.perf_counter() - start) * 1000, 3)
+
     def unload(self) -> None:
         self._executor = None
         super().unload()

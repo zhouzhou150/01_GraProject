@@ -68,6 +68,13 @@ class FasterWhisperAdapter(ModelAdapter):
             return "".join(segment.text.strip() for segment in segments)
         return build_simulated_prediction(audio_path, error_rate=0.06, seed_bias=37)
 
+    def warmup(self, audio_path: str | None = None) -> None:
+        if self.simulate or not audio_path:
+            return
+        start = time.perf_counter()
+        self.transcribe(audio_path)
+        self.load_time_ms = round(self.load_time_ms + (time.perf_counter() - start) * 1000, 3)
+
     def unload(self) -> None:
         self._model = None
         super().unload()

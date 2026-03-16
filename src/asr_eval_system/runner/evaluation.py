@@ -19,7 +19,8 @@ def run_experiment(
     for model_id in config.model_ids:
         adapter = model_registry[model_id]
         adapter.load()
-        adapter.warmup()
+        warmup_audio = dataset_items[0].audio_path if dataset_items else None
+        adapter.warmup(warmup_audio)
         metadata = adapter.metadata()
         model_results: list[InferenceResult] = []
 
