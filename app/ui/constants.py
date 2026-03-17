@@ -102,10 +102,10 @@ SESSION_DEFAULTS = {
     "dataset_label": "尚未加载数据集",
     "dataset_issues": [],
     "loaded_models": {},
+    "loaded_adapters": {},
     "performance_report": None,
     "overall_report": None,
     "overall_exports": None,
     "flash_notice": None,
     "upload_widget_nonce": 0,
 }
-

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import math
 from statistics import mean
 
@@ -15,18 +16,18 @@ def aggregate_results(
     if not results:
         raise ValueError("聚合结果时至少需要一条样本记录。")
 
-    latencies = [item.latency_ms for item in results]
-    upls = [item.upl_ms for item in results]
-    rtfs = [item.rtf for item in results]
-    throughputs = [item.throughput for item in results]
-    cers = [item.cer for item in results]
-    wers = [item.wer for item in results]
-    sers = [item.ser for item in results]
-    semdists = [item.semdist for item in results]
-    cpus = [item.cpu_pct for item in results if item.cpu_pct is not None]
-    mems = [item.mem_mb for item in results if item.mem_mb is not None]
-    gpus = [item.gpu_mem_mb for item in results if item.gpu_mem_mb is not None]
-    load_time_ms = max(item.load_time_ms for item in results)
+    latencies = [_coerce_float(item.latency_ms, "latency_ms") for item in results]
+    upls = [_coerce_float(item.upl_ms, "upl_ms") for item in results]
+    rtfs = [_coerce_float(item.rtf, "rtf") for item in results]
+    throughputs = [_coerce_float(item.throughput, "throughput") for item in results]
+    cers = [_coerce_float(item.cer, "cer") for item in results]
+    wers = [_coerce_float(item.wer, "wer") for item in results]
+    sers = [_coerce_float(item.ser, "ser") for item in results]
+    semdists = [_coerce_float(item.semdist, "semdist") for item in results]
+    cpus = [_coerce_float(item.cpu_pct, "cpu_pct") for item in results if item.cpu_pct is not None]
+    mems = [_coerce_float(item.mem_mb, "mem_mb") for item in results if item.mem_mb is not None]
+    gpus = [_coerce_float(item.gpu_mem_mb, "gpu_mem_mb") for item in results if item.gpu_mem_mb is not None]
+    load_time_ms = max(_coerce_float(item.load_time_ms, "load_time_ms") for item in results)
 
     quiet = [item for item in results if item.scene_tag == "quiet"]
     noisy = [item for item in results if item.scene_tag != "quiet"]
@@ -90,6 +91,27 @@ def _percentile(values: list[float], percentile: int) -> float:
     ordered = sorted(values)
     index = max(0, min(len(ordered) - 1, math.ceil((percentile / 100) * len(ordered)) - 1))
     return ordered[index]
+
+
+def _coerce_float(value, field_name: str) -> float:
+    candidate = value
+    if hasattr(candidate, "item"):
+        with contextlib.suppress(Exception):
+            candidate = candidate.item()
+    if hasattr(candidate, "numpy"):
+        with contextlib.suppress(Exception):
+            array_value = candidate.numpy()
+            if getattr(array_value, "size", 0) == 1:
+                candidate = float(array_value.reshape(-1)[0])
+    if hasattr(candidate, "tolist"):
+        with contextlib.suppress(Exception):
+            listed = candidate.tolist()
+            if isinstance(listed, list) and len(listed) == 1:
+                candidate = listed[0]
+    try:
+        return float(candidate)
+    except Exception as exc:
+        raise TypeError(f"{field_name} 必须是数值类型，当前为 {type(value).__name__}") from exc
 
 
 def _resource_proxy(

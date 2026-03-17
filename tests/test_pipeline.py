@@ -3,9 +3,9 @@ import json
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock
 import wave
 from pathlib import Path
+from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -36,7 +36,7 @@ class PipelineTests(unittest.TestCase):
     def test_end_to_end_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
-            items = []
+            items: list[DatasetManifest] = []
             for index, text in enumerate(["深度学习语音识别", "语音测试系统"], start=1):
                 wav_path = root / f"sample_{index}.wav"
                 txt_path = wav_path.with_suffix(".txt")
@@ -140,14 +140,30 @@ class PipelineTests(unittest.TestCase):
         adapter = PaddleSpeechAdapter(device="cpu", simulate=False, lang="zh_en")
         adapter.loaded = True
         adapter.simulate = False
-        adapter._executor = Mock(return_value="测试结果")
+        adapter._executor = Mock(return_value="test result")
         text = adapter.transcribe("demo.wav")
-        self.assertEqual(text, "测试结果")
+        self.assertEqual(text, "test result")
         adapter._executor.assert_called_once_with(
             audio_file="demo.wav",
             lang="zh_en",
             codeswitch=True,
+            device="cpu",
             model="conformer_talcs",
+        )
+
+    def test_paddlespeech_zh_uses_explicit_default_model(self) -> None:
+        adapter = PaddleSpeechAdapter(device="cpu", simulate=False, lang="zh")
+        adapter.loaded = True
+        adapter.simulate = False
+        adapter._executor = Mock(return_value="test result")
+        text = adapter.transcribe("demo.wav")
+        self.assertEqual(text, "test result")
+        adapter._executor.assert_called_once_with(
+            audio_file="demo.wav",
+            lang="zh",
+            codeswitch=False,
+            device="cpu",
+            model="conformer_u2pp_online_wenetspeech",
         )
 
 

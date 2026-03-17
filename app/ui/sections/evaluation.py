@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 import pandas as pd
 import streamlit as st
 
 from ui.constants import MODEL_LIBRARY, SUMMARY_COLUMN_MAP
 from ui.helpers import render_summary_cards, run_evaluation_workflow, section_header, summary_frame
+
+LOGGER = logging.getLogger(__name__)
 
 
 def render_performance_results(report) -> None:
@@ -66,7 +70,8 @@ def render_evaluation_section() -> None:
                     )
             except Exception as exc:
                 st.session_state["performance_report"] = None
-                st.error(f"性能测试失败：{exc}")
+                LOGGER.exception("Performance evaluation failed")
+                st.error(f"性能测试失败：{type(exc).__name__}: {exc}")
             else:
                 st.session_state["performance_report"] = report
                 st.success("性能测试完成。")
@@ -105,7 +110,8 @@ def render_evaluation_section() -> None:
             except Exception as exc:
                 st.session_state["overall_report"] = None
                 st.session_state["overall_exports"] = None
-                st.error(f"总体测试失败：{exc}")
+                LOGGER.exception("Overall evaluation failed")
+                st.error(f"总体测试失败：{type(exc).__name__}: {exc}")
             else:
                 st.session_state["overall_report"] = report
                 st.session_state["overall_exports"] = exports

@@ -8,6 +8,8 @@ from asr_eval_system.models.simulated import build_simulated_prediction
 
 class RNNCTCAdapter(ModelAdapter):
     def load(self) -> None:
+        if self.loaded:
+            return
         start = time.perf_counter()
         time.sleep(0.025)
         self.load_time_ms = round((time.perf_counter() - start) * 1000, 3)
@@ -18,4 +20,3 @@ class RNNCTCAdapter(ModelAdapter):
         if not self.loaded:
             self.load()
         return build_simulated_prediction(audio_path, error_rate=0.12, seed_bias=23)
-

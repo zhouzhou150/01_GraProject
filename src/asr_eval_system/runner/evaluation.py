@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import time
 
 from asr_eval_system.metrics.performance import aggregate_results
@@ -9,6 +10,29 @@ from asr_eval_system.schemas import AggregateReport, DatasetManifest, Experiment
 
 
 _PROCESS_LIFETIME_ADAPTERS: list[object] = []
+
+
+def _coerce_float(value, field_name: str, allow_none: bool = False) -> float | None:
+    if value is None:
+        return None if allow_none else 0.0
+    candidate = value
+    if hasattr(candidate, "item"):
+        with contextlib.suppress(Exception):
+            candidate = candidate.item()
+    if hasattr(candidate, "numpy"):
+        with contextlib.suppress(Exception):
+            array_value = candidate.numpy()
+            if getattr(array_value, "size", 0) == 1:
+                candidate = float(array_value.reshape(-1)[0])
+    if hasattr(candidate, "tolist"):
+        with contextlib.suppress(Exception):
+            listed = candidate.tolist()
+            if isinstance(listed, list) and len(listed) == 1:
+                candidate = listed[0]
+    try:
+        return float(candidate)
+    except Exception as exc:
+        raise TypeError(f"{field_name} 必须是数值类型，当前为 {type(value).__name__}") from exc
 
 
 def run_experiment(
@@ -37,9 +61,13 @@ def run_experiment(
                 prediction = adapter.transcribe(item.audio_path)
                 infer_elapsed_ms = (time.perf_counter() - start) * 1000
                 upl_ms = infer_elapsed_ms + 30.0
-                duration = max(item.duration_sec, 0.1)
+                duration = max(_coerce_float(item.duration_sec, f"{item.sample_id}.duration_sec") or 0.0, 0.1)
                 rtf_value = (infer_elapsed_ms / 1000) / duration
                 throughput = 1000 / max(infer_elapsed_ms, 1.0)
+                cpu_value = _coerce_float(cpu_pct, f"{item.sample_id}.cpu_pct", allow_none=True)
+                mem_value = _coerce_float(mem_mb, f"{item.sample_id}.mem_mb", allow_none=True)
+                gpu_value = _coerce_float(gpu_mem_mb, f"{item.sample_id}.gpu_mem_mb", allow_none=True)
+                load_time_ms = _coerce_float(metadata.get("load_time_ms", 0.0), f"{model_id}.load_time_ms") or 0.0
                 result = InferenceResult(
                     sample_id=item.sample_id,
                     model_id=model_id,
@@ -51,10 +79,10 @@ def run_experiment(
                     upl_ms=round(upl_ms, 4),
                     rtf=round(rtf_value, 4),
                     throughput=round(throughput, 4),
-                    cpu_pct=cpu_pct,
-                    mem_mb=mem_mb,
-                    gpu_mem_mb=gpu_mem_mb,
-                    load_time_ms=metadata.get("load_time_ms", 0.0),
+                    cpu_pct=cpu_value,
+                    mem_mb=mem_value,
+                    gpu_mem_mb=gpu_value,
+                    load_time_ms=load_time_ms,
                     cer=round(cer(item.transcript, prediction), 4),
                     wer=round(wer(item.transcript, prediction), 4),
                     ser=round(ser(item.transcript, prediction), 4),
@@ -65,6 +93,10 @@ def run_experiment(
                 )
             except Exception as exc:  # pragma: no cover
                 infer_elapsed_ms = (time.perf_counter() - start) * 1000
+                cpu_value = _coerce_float(cpu_pct, f"{item.sample_id}.cpu_pct", allow_none=True)
+                mem_value = _coerce_float(mem_mb, f"{item.sample_id}.mem_mb", allow_none=True)
+                gpu_value = _coerce_float(gpu_mem_mb, f"{item.sample_id}.gpu_mem_mb", allow_none=True)
+                load_time_ms = _coerce_float(metadata.get("load_time_ms", 0.0), f"{model_id}.load_time_ms") or 0.0
                 result = InferenceResult(
                     sample_id=item.sample_id,
                     model_id=model_id,
@@ -76,10 +108,10 @@ def run_experiment(
                     upl_ms=round(infer_elapsed_ms, 4),
                     rtf=0.0,
                     throughput=0.0,
-                    cpu_pct=cpu_pct,
-                    mem_mb=mem_mb,
-                    gpu_mem_mb=gpu_mem_mb,
-                    load_time_ms=metadata.get("load_time_ms", 0.0),
+                    cpu_pct=cpu_value,
+                    mem_mb=mem_value,
+                    gpu_mem_mb=gpu_value,
+                    load_time_ms=load_time_ms,
                     cer=1.0,
                     wer=1.0,
                     ser=1.0,
@@ -134,19 +166,39 @@ def run_experiment_from_specs(
             notes=config.notes,
         )
         skip_unload = {str(spec["model_id"])} if _should_isolate_model_spec(spec) else None
-        report = run_experiment(
-            config=single_config,
-            dataset_items=dataset_items,
-            model_registry=build_model_registry_from_specs([spec]),
-            profile=profile,
-            skip_unload_model_ids=skip_unload,
-        )
+        try:
+            report = run_experiment(
+                config=single_config,
+                dataset_items=dataset_items,
+                model_registry=build_model_registry_from_specs([spec]),
+                profile=profile,
+                skip_unload_model_ids=skip_unload,
+            )
+        except Exception as exc:
+            model_id = str(spec.get("model_id", "unknown"))
+            raise RuntimeError(f"{model_id} 评测失败：{exc}") from exc
         summary.extend(report.summary)
         sample_results.extend(report.sample_results)
 
+    return build_aggregate_report(
+        config=config,
+        dataset_name=config.dataset_name,
+        summary=summary,
+        sample_results=sample_results,
+        profile=profile,
+    )
+
+
+def build_aggregate_report(
+    config: ExperimentConfig,
+    dataset_name: str,
+    summary: list[dict],
+    sample_results: list[dict],
+    profile: SatisfactionProfile,
+) -> AggregateReport:
     return AggregateReport.build(
         experiment_id=config.experiment_id,
-        dataset_name=config.dataset_name,
+        dataset_name=dataset_name,
         config=config.to_dict(),
         summary=summary,
         sample_results=sample_results,

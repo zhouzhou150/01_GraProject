@@ -16,6 +16,7 @@ class ModelAdapter(ABC):
         self.loaded = False
         self.load_time_ms = 0.0
         self.load_error = ""
+        self.warmed_up = False
 
     @abstractmethod
     def load(self) -> None:
@@ -30,6 +31,7 @@ class ModelAdapter(ABC):
 
     def unload(self) -> None:
         self.loaded = False
+        self.warmed_up = False
 
     def metadata(self) -> dict[str, Any]:
         return {

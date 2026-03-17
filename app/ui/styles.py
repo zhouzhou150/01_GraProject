@@ -142,6 +142,53 @@ def inject_styles() -> None:
           font-weight: 700;
         }
 
+        .model-card-title {
+          margin: 0.15rem 0 0.45rem;
+          color: var(--ink) !important;
+          font-size: 1.05rem;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+
+        .model-card-remove-form {
+          margin: 0;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .model-card-remove-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.45rem;
+          min-width: 2.45rem;
+          height: 2.45rem;
+          min-height: 2.45rem;
+          margin-left: auto;
+          border-radius: 18px;
+          background: linear-gradient(135deg, rgba(255, 248, 239, 0.98), rgba(244, 223, 198, 0.94));
+          color: #8c4d27 !important;
+          border: 1px solid rgba(137, 101, 71, 0.22);
+          box-shadow: 0 10px 26px rgba(81, 56, 34, 0.12);
+          text-decoration: none !important;
+          appearance: none;
+          cursor: pointer;
+          padding: 0;
+          font-size: 1.08rem;
+          font-weight: 700;
+          line-height: 1;
+          font-family: inherit;
+          opacity: 1 !important;
+          transition: transform 120ms ease, background 120ms ease, color 120ms ease, border-color 120ms ease;
+        }
+
+        .model-card-remove-link:hover {
+          background: linear-gradient(135deg, rgba(255, 244, 229, 1), rgba(240, 213, 183, 0.96));
+          color: #773d1e !important;
+          border-color: rgba(137, 101, 71, 0.3);
+          transform: translateY(-1px);
+        }
+
         .card p, .chart-hint {
           margin: .16rem 0;
           color: var(--ink-soft) !important;
@@ -270,15 +317,18 @@ def inject_styles() -> None:
         }
 
         div[data-testid="stButton"] > button,
-        div[data-testid="stDownloadButton"] > button {
+        div[data-testid="stDownloadButton"] > button,
+        button[data-testid^="stBaseButton-"] {
           border-radius: 999px;
           border: 1px solid var(--line);
           background: linear-gradient(135deg, #fff6ec, #f4dfc6);
           color: #5a3f2a !important;
           font-weight: 700;
+          box-shadow: 0 10px 26px rgba(81, 56, 34, 0.12);
         }
 
-        div[data-testid="stButton"] > button[kind="primary"] {
+        div[data-testid="stButton"] > button[kind="primary"],
+        button[data-testid="stBaseButton-primary"] {
           background: linear-gradient(135deg, var(--accent), var(--accent-deep));
           color: #fff !important;
           border-color: transparent;
