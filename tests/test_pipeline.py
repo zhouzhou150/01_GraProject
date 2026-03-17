@@ -10,9 +10,11 @@ from unittest.mock import Mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from asr_eval_system.metrics.satisfaction import build_satisfaction_profile
+from asr_eval_system.models.cnn_ctc import CNNCTCAdapter
 from asr_eval_system.models.faster_whisper_adapter import FasterWhisperAdapter
 from asr_eval_system.models.paddlespeech_adapter import PaddleSpeechAdapter
 from asr_eval_system.models.registry import build_model_registry
+from asr_eval_system.models.rnn_ctc import RNNCTCAdapter
 from asr_eval_system.reporting.report_generator import export_report_bundle
 from asr_eval_system.runner.evaluation import run_experiment, run_experiment_from_specs
 from asr_eval_system.schemas import DatasetManifest, ExperimentConfig
@@ -127,6 +129,43 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(len(report.summary), 2)
             self.assertEqual(len(report.sample_results), 2)
 
+    def test_run_experiment_from_specs_emits_progress(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            wav_path = root / "sample.wav"
+            with wave.open(str(wav_path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(16000)
+                wav_file.writeframes(b"\x00\x00" * 16000)
+            items = [
+                DatasetManifest(
+                    sample_id="s1",
+                    audio_path=str(wav_path),
+                    transcript="测试样本",
+                    duration_sec=1.0,
+                )
+            ]
+            events: list[dict] = []
+            run_experiment_from_specs(
+                config=ExperimentConfig(
+                    experiment_id="exp_progress",
+                    model_ids=["cnn_ctc", "rnn_ctc"],
+                    dataset_name="demo_set",
+                ),
+                dataset_items=items,
+                model_specs=[
+                    {"model_id": "cnn_ctc", "device": "cpu", "simulate": True, "options": {}},
+                    {"model_id": "rnn_ctc", "device": "cpu", "simulate": True, "options": {}},
+                ],
+                profile=self.profile,
+                progress_callback=events.append,
+            )
+            self.assertTrue(events)
+            self.assertEqual(events[0]["stage"], "loading")
+            self.assertEqual(events[-1]["stage"], "finished")
+            self.assertEqual(events[-1]["model_total"], 2)
+
     def test_faster_whisper_normalizes_unstable_compute_types(self) -> None:
         gpu_adapter = FasterWhisperAdapter(device="cuda", simulate=False, compute_type="float32")
         self.assertEqual(gpu_adapter.compute_type, "float16")
@@ -165,6 +204,20 @@ class PipelineTests(unittest.TestCase):
             device="cpu",
             model="conformer_u2pp_online_wenetspeech",
         )
+
+    def test_cnn_ctc_requested_real_falls_back_to_proxy_baseline(self) -> None:
+        adapter = CNNCTCAdapter(device="cpu", simulate=False)
+        adapter.load()
+        self.assertTrue(adapter.simulate)
+        self.assertEqual(adapter.backend_name, "proxy-baseline")
+        self.assertIn("未接入真实 CNN-CTC", adapter.runtime_note)
+
+    def test_rnn_ctc_requested_real_falls_back_to_proxy_baseline(self) -> None:
+        adapter = RNNCTCAdapter(device="cpu", simulate=False)
+        adapter.load()
+        self.assertTrue(adapter.simulate)
+        self.assertEqual(adapter.backend_name, "proxy-baseline")
+        self.assertIn("未接入真实 RNN-CTC", adapter.runtime_note)
 
 
 if __name__ == "__main__":

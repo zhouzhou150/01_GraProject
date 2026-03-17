@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import contextlib
 import time
+from collections.abc import Callable
+from typing import Any
 
 from asr_eval_system.metrics.performance import aggregate_results
 from asr_eval_system.metrics.text_metrics import cer, semdist_score, ser, wer
 from asr_eval_system.models.registry import build_model_registry_from_specs
 from asr_eval_system.schemas import AggregateReport, DatasetManifest, ExperimentConfig, InferenceResult, SatisfactionProfile
 
+
+ProgressCallback = Callable[[dict[str, Any]], None]
 
 _PROCESS_LIFETIME_ADAPTERS: list[object] = []
 
@@ -32,7 +36,12 @@ def _coerce_float(value, field_name: str, allow_none: bool = False) -> float | N
     try:
         return float(candidate)
     except Exception as exc:
-        raise TypeError(f"{field_name} 必须是数值类型，当前为 {type(value).__name__}") from exc
+        raise TypeError(f"{field_name} must be a real number, got {type(value).__name__}") from exc
+
+
+def _emit_progress(progress_callback: ProgressCallback | None, **payload: Any) -> None:
+    if progress_callback is not None:
+        progress_callback(payload)
 
 
 def run_experiment(
@@ -41,20 +50,103 @@ def run_experiment(
     model_registry: dict[str, object],
     profile: SatisfactionProfile,
     skip_unload_model_ids: set[str] | None = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> AggregateReport:
     sample_results: list[dict] = []
     summary: list[dict] = []
     skip_unload = {str(model_id) for model_id in (skip_unload_model_ids or set())}
+    model_total = max(len(config.model_ids), 1)
+    sample_total = len(dataset_items)
+    model_total_steps = max(sample_total + 2, 2)
 
-    for model_id in config.model_ids:
+    for model_index, model_id in enumerate(config.model_ids, start=1):
         adapter = model_registry[model_id]
-        adapter.load()
-        warmup_audio = dataset_items[0].audio_path if dataset_items else None
-        adapter.warmup(warmup_audio)
-        metadata = adapter.metadata()
+
+        _emit_progress(
+            progress_callback,
+            stage="loading",
+            model_id=model_id,
+            model_index=model_index,
+            model_total=model_total,
+            model_step=0,
+            model_total_steps=model_total_steps,
+            sample_index=0,
+            sample_total=sample_total,
+            sample_id="",
+            pred_text="",
+            ref_text="",
+            status="running",
+            error_message="",
+        )
+
+        try:
+            adapter.load()
+            metadata = adapter.metadata()
+            _emit_progress(
+                progress_callback,
+                stage="warmup",
+                model_id=model_id,
+                model_index=model_index,
+                model_total=model_total,
+                model_step=1,
+                model_total_steps=model_total_steps,
+                sample_index=0,
+                sample_total=sample_total,
+                sample_id="",
+                pred_text="",
+                ref_text="",
+                backend=str(metadata.get("backend", "unknown")),
+                runtime_mode="模拟" if bool(metadata.get("simulate", True)) else "真实",
+                status="running",
+                error_message="",
+            )
+
+            warmup_audio = dataset_items[0].audio_path if dataset_items else None
+            adapter.warmup(warmup_audio)
+            metadata = adapter.metadata()
+            _emit_progress(
+                progress_callback,
+                stage="running",
+                model_id=model_id,
+                model_index=model_index,
+                model_total=model_total,
+                model_step=2,
+                model_total_steps=model_total_steps,
+                sample_index=0,
+                sample_total=sample_total,
+                sample_id="",
+                pred_text="",
+                ref_text="",
+                backend=str(metadata.get("backend", "unknown")),
+                runtime_mode="模拟" if bool(metadata.get("simulate", True)) else "真实",
+                status="running",
+                error_message="",
+            )
+        except Exception as exc:
+            metadata = adapter.metadata()
+            _emit_progress(
+                progress_callback,
+                stage="error",
+                model_id=model_id,
+                model_index=model_index,
+                model_total=model_total,
+                model_step=0,
+                model_total_steps=model_total_steps,
+                sample_index=0,
+                sample_total=sample_total,
+                sample_id="",
+                pred_text="",
+                ref_text="",
+                backend=str(metadata.get("backend", "unknown")),
+                runtime_mode="模拟" if bool(metadata.get("simulate", True)) else "真实",
+                status="error",
+                error_message=str(exc),
+            )
+            raise
+
         model_results: list[InferenceResult] = []
 
-        for item in dataset_items:
+        for item_index, item in enumerate(dataset_items, start=1):
             start = time.perf_counter()
             cpu_pct, mem_mb, gpu_mem_mb = _resource_snapshot()
             try:
@@ -124,11 +216,47 @@ def run_experiment(
                 )
             model_results.append(result)
             sample_results.append(result.to_dict())
+            _emit_progress(
+                progress_callback,
+                stage="running",
+                model_id=model_id,
+                model_index=model_index,
+                model_total=model_total,
+                model_step=min(model_total_steps, 2 + item_index),
+                model_total_steps=model_total_steps,
+                sample_index=item_index,
+                sample_total=sample_total,
+                sample_id=item.sample_id,
+                pred_text=result.pred_text,
+                ref_text=item.transcript,
+                backend=result.backend,
+                runtime_mode=result.runtime_mode,
+                status=result.status,
+                error_message=result.error_message,
+            )
 
         if model_id not in skip_unload:
             adapter.unload()
         summary_item = aggregate_results(model_id=model_id, results=model_results, profile=profile)
         summary.append(summary_item.to_dict())
+        _emit_progress(
+            progress_callback,
+            stage="finished",
+            model_id=model_id,
+            model_index=model_index,
+            model_total=model_total,
+            model_step=model_total_steps,
+            model_total_steps=model_total_steps,
+            sample_index=sample_total,
+            sample_total=sample_total,
+            sample_id=model_results[-1].sample_id if model_results else "",
+            pred_text=model_results[-1].pred_text if model_results else "",
+            ref_text=model_results[-1].ref_text if model_results else "",
+            backend=summary_item.backend,
+            runtime_mode=summary_item.runtime_mode,
+            status="ok",
+            error_message="",
+        )
 
     _retain_adapters(model_registry, skip_unload)
 
@@ -149,14 +277,17 @@ def run_experiment_from_specs(
     dataset_items: list[DatasetManifest],
     model_specs: list[dict],
     profile: SatisfactionProfile,
+    progress_callback: ProgressCallback | None = None,
 ) -> AggregateReport:
     summary: list[dict] = []
     sample_results: list[dict] = []
+    model_total = max(len(model_specs), 1)
 
-    for spec in model_specs:
+    for model_index, spec in enumerate(model_specs, start=1):
+        model_id = str(spec.get("model_id", "unknown"))
         single_config = ExperimentConfig(
             experiment_id=config.experiment_id,
-            model_ids=[str(spec["model_id"])],
+            model_ids=[model_id],
             dataset_name=config.dataset_name,
             dataset_split=config.dataset_split,
             device=str(spec.get("device", config.device)),
@@ -165,7 +296,16 @@ def run_experiment_from_specs(
             output_dir=config.output_dir,
             notes=config.notes,
         )
-        skip_unload = {str(spec["model_id"])} if _should_isolate_model_spec(spec) else None
+        skip_unload = {model_id} if _should_isolate_model_spec(spec) else None
+
+        def emit_single_model_progress(event: dict[str, Any]) -> None:
+            if progress_callback is None:
+                return
+            enriched = dict(event)
+            enriched["model_index"] = model_index
+            enriched["model_total"] = model_total
+            progress_callback(enriched)
+
         try:
             report = run_experiment(
                 config=single_config,
@@ -173,9 +313,9 @@ def run_experiment_from_specs(
                 model_registry=build_model_registry_from_specs([spec]),
                 profile=profile,
                 skip_unload_model_ids=skip_unload,
+                progress_callback=emit_single_model_progress,
             )
         except Exception as exc:
-            model_id = str(spec.get("model_id", "unknown"))
             raise RuntimeError(f"{model_id} 评测失败：{exc}") from exc
         summary.extend(report.summary)
         sample_results.extend(report.sample_results)
@@ -251,11 +391,13 @@ def _build_chart_payload(summary: list[dict]) -> dict[str, list[dict]]:
 def _build_conclusion(summary: list[dict]) -> str:
     if not summary:
         return "暂无实验结果。"
-    best_uss = max(summary, key=lambda item: item["uss"])
-    best_cer = min(summary, key=lambda item: item["cer"])
-    fastest = min(summary, key=lambda item: item["avg_latency_ms"])
+    ranking_source = [item for item in summary if item.get("runtime_mode") == "真实"] or summary
+    best_uss = max(ranking_source, key=lambda item: item["uss"])
+    best_cer = min(ranking_source, key=lambda item: item["cer"])
+    fastest = min(ranking_source, key=lambda item: item["avg_latency_ms"])
+    prefix = "在真实模型中，" if ranking_source is not summary else ""
     return (
-        f"综合满意度最高的模型为 {best_uss['model_id']}，USS 为 {best_uss['uss']:.2f}。"
-        f"识别误差最低的模型为 {best_cer['model_id']}，CER 为 {best_cer['cer']:.4f}。"
-        f"平均延迟最低的模型为 {fastest['model_id']}，平均延迟为 {fastest['avg_latency_ms']:.2f} ms。"
+        f"{prefix}综合满意度最高的模型是 {best_uss['model_id']}，USS 为 {best_uss['uss']:.2f}。"
+        f"识别误差最低的模型是 {best_cer['model_id']}，CER 为 {best_cer['cer']:.4f}。"
+        f"平均延迟最低的模型是 {fastest['model_id']}，平均延迟为 {fastest['avg_latency_ms']:.2f} ms。"
     )

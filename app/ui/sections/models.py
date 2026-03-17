@@ -12,6 +12,9 @@ from ui.helpers import model_option_summary, section_header
 from ui.state import reset_reports, set_flash_notice
 
 
+PROXY_BASELINE_MODELS = {"cnn_ctc", "rnn_ctc"}
+
+
 def _remove_loaded_model(model_id: str) -> None:
     adapter = st.session_state.get("loaded_adapters", {}).pop(model_id, None)
     if adapter is not None:
@@ -33,13 +36,13 @@ def _remove_loaded_model(model_id: str) -> None:
 def render_model_cards() -> None:
     specs = list(st.session_state["loaded_models"].values())
     if not specs:
-        st.info("尚未加载任何模型。先在左侧完成一次真实加载，右侧会自动形成对比队列。")
+        st.info("尚未加载任何模型。先在左侧完成一次加载，右侧会自动形成对比队列。")
         return
 
     cols = st.columns(2, gap="large")
     for index, spec in enumerate(specs):
         with cols[index % 2]:
-            title_col, action_col = st.columns([0.78, 0.22], gap="small")
+            title_col, action_col = st.columns([0.82, 0.18], gap="small")
             title_col.markdown(f'<div class="model-card-title">{html.escape(spec["label"])}</div>', unsafe_allow_html=True)
             with action_col:
                 if st.button("×", key=f"remove-card-{spec['model_id']}", help=f"移除 {spec['label']}", width="content"):
@@ -82,7 +85,12 @@ def render_model_section() -> None:
         config_cols = st.columns(2, gap="large")
         with config_cols[0]:
             device = st.selectbox("部署设备", ["cpu", "cuda"], index=0)
-            simulate = st.toggle("使用模拟模式", value=True)
+            if model_id in PROXY_BASELINE_MODELS:
+                st.toggle("使用模拟模式", value=True, disabled=True, key=f"simulate-proxy-{model_id}")
+                simulate = True
+                st.caption("该模型当前只提供代理基线，不参与真实模型加载。")
+            else:
+                simulate = st.toggle("使用模拟模式", value=True)
         with config_cols[1]:
             if model_id == "cnn_ctc":
                 options = {
@@ -148,6 +156,7 @@ def render_model_section() -> None:
                     "load_time_ms": float(metadata.get("load_time_ms", 0.0)),
                     "loaded_at": datetime.now().strftime("%H:%M:%S"),
                 }
+                st.session_state.setdefault("loaded_adapters", {})[model_id] = adapter
                 reset_reports()
                 set_flash_notice("success", f"{MODEL_LIBRARY[model_id]['label']} 已加入当前评测队列。")
                 st.rerun()
@@ -156,6 +165,11 @@ def render_model_section() -> None:
             _remove_loaded_model(model_id)
 
         if action_cols[2].button("清空模型队列", width="stretch"):
+            for adapter in st.session_state.get("loaded_adapters", {}).values():
+                try:
+                    adapter.unload()
+                except Exception:
+                    pass
             st.session_state["loaded_models"] = {}
             st.session_state["loaded_adapters"] = {}
             reset_reports()

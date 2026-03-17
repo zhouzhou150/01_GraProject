@@ -1,10 +1,26 @@
 from __future__ import annotations
 
 MODEL_LIBRARY = {
-    "cnn_ctc": {"label": "CNN-CTC", "desc": "轻量卷积基线，适合快速评测。", "accent": "#c96a2b"},
-    "rnn_ctc": {"label": "RNN-CTC", "desc": "时序建模基线，强调稳定性。", "accent": "#6a8f7a"},
-    "faster_whisper": {"label": "Faster-Whisper", "desc": "精度与速度平衡，可切换 Whisper 规模。", "accent": "#2f6c8f"},
-    "paddlespeech": {"label": "PaddleSpeech", "desc": "中文语音生态友好，适合工程对比。", "accent": "#8f5a44"},
+    "cnn_ctc": {
+        "label": "CNN-CTC",
+        "desc": "轻量代理基线，用于快速对照，不代表真实 CNN-CTC 声学模型能力。",
+        "accent": "#c96a2b",
+    },
+    "rnn_ctc": {
+        "label": "RNN-CTC",
+        "desc": "时序代理基线，用于快速对照，不代表真实 RNN-CTC 声学模型能力。",
+        "accent": "#6a8f7a",
+    },
+    "faster_whisper": {
+        "label": "Faster-Whisper",
+        "desc": "精度与速度平衡，可切换 Whisper 规模。",
+        "accent": "#2f6c8f",
+    },
+    "paddlespeech": {
+        "label": "PaddleSpeech",
+        "desc": "中文语音生态友好，适合工程对比。",
+        "accent": "#8f5a44",
+    },
 }
 
 OPTION_LABELS = {
