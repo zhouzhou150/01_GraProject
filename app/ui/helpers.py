@@ -1,0 +1,224 @@
+from __future__ import annotations
+
+import html
+import json
+from datetime import datetime
+from pathlib import Path
+import time
+from typing import Any
+
+import pandas as pd
+import streamlit as st
+
+from asr_eval_system.data.audio_utils import (
+    build_sample_id,
+    decode_transcript_bytes,
+    normalize_audio_file,
+    normalize_uploaded_name,
+    resolve_transcript_text,
+    transcript_match_keys,
+)
+from asr_eval_system.data.dataset import load_manifest, validate_manifest
+from asr_eval_system.reporting.report_generator import export_report_bundle
+from asr_eval_system.runner.evaluation import run_experiment_from_specs
+from asr_eval_system.schemas import DatasetManifest, ExperimentConfig
+from asr_eval_system.service import database_path, load_default_profile, manifest_path, report_dir, runtime_dir
+from asr_eval_system.storage.database import DatabaseManager
+from ui.constants import MODEL_LIBRARY, OPTION_LABELS, SAMPLE_COLUMN_MAP, SUMMARY_COLUMN_MAP
+
+
+def section_header(kicker: str, title: str, copy: str) -> None:
+    st.markdown(
+        f'<div class="section-kicker">{html.escape(kicker)}</div><h2 class="section-title">{html.escape(title)}</h2><p class="section-copy">{html.escape(copy)}</p>',
+        unsafe_allow_html=True,
+    )
+
+
+def dataset_duration(items: list[DatasetManifest]) -> float:
+    return round(sum(item.duration_sec for item in items), 2)
+
+
+def dataset_preview_frame(items: list[DatasetManifest]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "样本 ID": item.sample_id,
+                "文件名": Path(item.audio_path).name,
+                "时长(s)": round(item.duration_sec, 2),
+                "参考文本": item.transcript,
+                "场景": item.scene_tag,
+                "噪声": item.noise_tag,
+            }
+            for item in items
+        ]
+    )
+
+
+def summary_frame(summary: list[dict]) -> pd.DataFrame:
+    if not summary:
+        return pd.DataFrame()
+    frame = pd.DataFrame(summary).copy()
+    frame["model_label"] = frame["model_id"].map(lambda item: MODEL_LIBRARY.get(item, {}).get("label", item))
+    ordered = ["model_label"] + [key for key in SUMMARY_COLUMN_MAP if key in frame.columns and key != "model_label"]
+    return frame[ordered].rename(columns=SUMMARY_COLUMN_MAP)
+
+
+def sample_frame(sample_results: list[dict]) -> pd.DataFrame:
+    if not sample_results:
+        return pd.DataFrame()
+    frame = pd.DataFrame(sample_results).copy()
+    frame["model_label"] = frame["model_id"].map(lambda item: MODEL_LIBRARY.get(item, {}).get("label", item))
+    ordered = ["model_label"] + [key for key in SAMPLE_COLUMN_MAP if key in frame.columns and key != "model_label"]
+    return frame[ordered].rename(columns=SAMPLE_COLUMN_MAP)
+
+
+def render_summary_cards(cards: list[dict[str, str]]) -> None:
+    cols = st.columns(len(cards), gap="large")
+    for col, card in zip(cols, cards, strict=False):
+        with col:
+            st.markdown(
+                f"""
+                <div class="summary-card">
+                  <div class="summary-card-label">{html.escape(card["label"])}</div>
+                  <div class="summary-card-model">{html.escape(card["model"])}</div>
+                  <div class="summary-card-value">{html.escape(card["value"])}</div>
+                  <div class="summary-card-meta">{html.escape(card["meta"])}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+def merge_uploaded_entries(*groups: Any) -> list[Any]:
+    merged: list[Any] = []
+    seen_names: set[str] = set()
+    for group in groups:
+        if not group:
+            continue
+        entries = group if isinstance(group, list) else [group]
+        for entry in entries:
+            normalized_name = normalize_uploaded_name(getattr(entry, "name", ""))
+            if normalized_name and normalized_name in seen_names:
+                continue
+            if normalized_name:
+                seen_names.add(normalized_name)
+            merged.append(entry)
+    return merged
+
+
+def build_sidecar_transcript_map(uploaded_text_files: list | None) -> dict[str, str]:
+    transcript_map: dict[str, str] = {}
+    for transcript_file in uploaded_text_files or []:
+        content = decode_transcript_bytes(transcript_file.getvalue(), suffix=Path(transcript_file.name).suffix)
+        for key in transcript_match_keys(transcript_file.name):
+            transcript_map[key] = content
+    return transcript_map
+
+
+def load_demo_dataset_with_progress() -> tuple[list[DatasetManifest], list[str]]:
+    items = load_manifest(manifest_path())
+    progress = st.progress(0)
+    status = st.empty()
+    total = max(len(items), 1)
+    for index, item in enumerate(items, start=1):
+        status.info(f"正在读取示例样本：{Path(item.audio_path).name}")
+        time.sleep(0.08)
+        progress.progress(index / total)
+    issues = validate_manifest(items)
+    progress.empty()
+    status.empty()
+    return items, issues
+
+
+def save_uploaded_dataset(uploaded_audio_files: list, transcript_lookup: dict[str, str]) -> tuple[list[DatasetManifest], list[str], str]:
+    batch_name = datetime.now().strftime("upload_%Y%m%d_%H%M%S")
+    target_dir = runtime_dir() / "uploads" / batch_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    items: list[DatasetManifest] = []
+    progress = st.progress(0)
+    status = st.empty()
+    total = max(len(uploaded_audio_files), 1)
+
+    for index, uploaded_audio in enumerate(uploaded_audio_files, start=1):
+        normalized_name = normalize_uploaded_name(uploaded_audio.name)
+        source_path = Path(normalized_name)
+        target_name = source_path.with_suffix(".wav").name
+        audio_path = target_dir / target_name
+        if audio_path.exists():
+            audio_path = target_dir / f"{audio_path.stem}_{index:02d}.wav"
+        status.info(f"正在导入：{source_path.name}")
+        raw_path = target_dir / source_path.name
+        raw_path.write_bytes(uploaded_audio.getvalue())
+        duration_sec = normalize_audio_file(raw_path, audio_path)
+        ref_text = resolve_transcript_text(transcript_lookup, normalized_name).strip()
+        if ref_text:
+            audio_path.with_suffix(".txt").write_text(ref_text, encoding="utf-8")
+        items.append(
+            DatasetManifest(
+                sample_id=build_sample_id(normalized_name, index),
+                audio_path=str(audio_path),
+                transcript=ref_text,
+                duration_sec=duration_sec,
+                split="custom",
+                scene_tag="uploaded",
+                noise_tag="unknown",
+                accent_tag="unknown",
+            )
+        )
+        time.sleep(0.04)
+        progress.progress(index / total)
+
+    issues = validate_manifest(items)
+    progress.empty()
+    status.empty()
+    return items, issues, batch_name
+
+
+def model_option_summary(options: dict[str, str]) -> str:
+    if not options:
+        return "默认配置"
+    return " / ".join(f"{OPTION_LABELS.get(key, key)}: {value}" for key, value in options.items())
+
+
+def run_evaluation_workflow(
+    dataset_items: list[DatasetManifest],
+    dataset_name: str,
+    model_specs: list[dict],
+    experiment_prefix: str,
+    sample_limit: int | None = None,
+    export_bundle: bool = False,
+) -> tuple[object, dict[str, str] | None]:
+    selected_items = list(dataset_items[:sample_limit] if sample_limit else dataset_items)
+    config = ExperimentConfig(
+        experiment_id=datetime.now().strftime(f"{experiment_prefix}_%Y%m%d_%H%M%S"),
+        model_ids=[spec["model_id"] for spec in model_specs],
+        dataset_name=dataset_name,
+        output_dir=str(report_dir()),
+        notes=json.dumps(
+            [
+                {
+                    "model_id": spec["model_id"],
+                    "device": spec["device"],
+                    "simulate": spec["simulate"],
+                    "options": spec["options"],
+                    "sample_limit": sample_limit,
+                }
+                for spec in model_specs
+            ],
+            ensure_ascii=False,
+        ),
+    )
+    report = run_experiment_from_specs(
+        config=config,
+        dataset_items=selected_items,
+        model_specs=model_specs,
+        profile=load_default_profile(),
+    )
+    exports = None
+    if export_bundle:
+        exports = export_report_bundle(report, report_dir())
+        database = DatabaseManager(database_path())
+        database.save_experiment(report)
+        for export_type in ("json", "csv", "markdown"):
+            database.record_export(report.experiment_id, export_type, exports[export_type], exports["created_at"])
+    return report, exports

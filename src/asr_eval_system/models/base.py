@@ -12,6 +12,7 @@ class ModelAdapter(ABC):
         self.simulate = simulate
         self.backend_name = "simulated" if simulate else "real"
         self.backend_detail = ""
+        self.runtime_note = ""
         self.loaded = False
         self.load_time_ms = 0.0
         self.load_error = ""
@@ -36,6 +37,7 @@ class ModelAdapter(ABC):
             "device": self.device,
             "backend": self.backend_name,
             "backend_detail": self.backend_detail,
+            "runtime_note": self.runtime_note,
             "loaded": self.loaded,
             "load_time_ms": self.load_time_ms,
             "requested_simulate": self.requested_simulate,

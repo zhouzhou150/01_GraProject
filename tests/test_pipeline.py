@@ -3,15 +3,18 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock
 import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from asr_eval_system.metrics.satisfaction import build_satisfaction_profile
+from asr_eval_system.models.faster_whisper_adapter import FasterWhisperAdapter
+from asr_eval_system.models.paddlespeech_adapter import PaddleSpeechAdapter
 from asr_eval_system.models.registry import build_model_registry
 from asr_eval_system.reporting.report_generator import export_report_bundle
-from asr_eval_system.runner.evaluation import run_experiment
+from asr_eval_system.runner.evaluation import run_experiment, run_experiment_from_specs
 from asr_eval_system.schemas import DatasetManifest, ExperimentConfig
 from asr_eval_system.storage.database import DatabaseManager
 
@@ -84,6 +87,68 @@ class PipelineTests(unittest.TestCase):
 
             payload = json.loads(Path(export_paths["json"]).read_text(encoding="utf-8"))
             self.assertEqual(payload["experiment_id"], "exp_demo")
+
+    def test_run_experiment_from_specs_supports_simulated_specs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            wav_path = root / "sample.wav"
+            with wave.open(str(wav_path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(16000)
+                wav_file.writeframes(b"\x00\x00" * 16000)
+            items = [
+                DatasetManifest(
+                    sample_id="s1",
+                    audio_path=str(wav_path),
+                    transcript="测试样本",
+                    duration_sec=1.0,
+                )
+            ]
+            config = ExperimentConfig(
+                experiment_id="exp_specs",
+                model_ids=["cnn_ctc", "faster_whisper"],
+                dataset_name="demo_set",
+            )
+            report = run_experiment_from_specs(
+                config=config,
+                dataset_items=items,
+                model_specs=[
+                    {"model_id": "cnn_ctc", "device": "cpu", "simulate": True, "options": {}},
+                    {
+                        "model_id": "faster_whisper",
+                        "device": "cpu",
+                        "simulate": True,
+                        "options": {"model_size": "tiny", "compute_type": "int8", "lang": "zh"},
+                    },
+                ],
+                profile=self.profile,
+            )
+            self.assertEqual(len(report.summary), 2)
+            self.assertEqual(len(report.sample_results), 2)
+
+    def test_faster_whisper_normalizes_unstable_compute_types(self) -> None:
+        gpu_adapter = FasterWhisperAdapter(device="cuda", simulate=False, compute_type="float32")
+        self.assertEqual(gpu_adapter.compute_type, "float16")
+        self.assertTrue(gpu_adapter.runtime_note)
+
+        cpu_adapter = FasterWhisperAdapter(device="cpu", simulate=False, compute_type="float16")
+        self.assertEqual(cpu_adapter.compute_type, "int8")
+        self.assertTrue(cpu_adapter.runtime_note)
+
+    def test_paddlespeech_zh_en_enables_codeswitch(self) -> None:
+        adapter = PaddleSpeechAdapter(device="cpu", simulate=False, lang="zh_en")
+        adapter.loaded = True
+        adapter.simulate = False
+        adapter._executor = Mock(return_value="测试结果")
+        text = adapter.transcribe("demo.wav")
+        self.assertEqual(text, "测试结果")
+        adapter._executor.assert_called_once_with(
+            audio_file="demo.wav",
+            lang="zh_en",
+            codeswitch=True,
+            model="conformer_talcs",
+        )
 
 
 if __name__ == "__main__":

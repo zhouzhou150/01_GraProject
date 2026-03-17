@@ -4,7 +4,11 @@ import time
 
 from asr_eval_system.metrics.performance import aggregate_results
 from asr_eval_system.metrics.text_metrics import cer, semdist_score, ser, wer
+from asr_eval_system.models.registry import build_model_registry_from_specs
 from asr_eval_system.schemas import AggregateReport, DatasetManifest, ExperimentConfig, InferenceResult, SatisfactionProfile
+
+
+_PROCESS_LIFETIME_ADAPTERS: list[object] = []
 
 
 def run_experiment(
@@ -12,9 +16,11 @@ def run_experiment(
     dataset_items: list[DatasetManifest],
     model_registry: dict[str, object],
     profile: SatisfactionProfile,
+    skip_unload_model_ids: set[str] | None = None,
 ) -> AggregateReport:
     sample_results: list[dict] = []
     summary: list[dict] = []
+    skip_unload = {str(model_id) for model_id in (skip_unload_model_ids or set())}
 
     for model_id in config.model_ids:
         adapter = model_registry[model_id]
@@ -87,9 +93,56 @@ def run_experiment(
             model_results.append(result)
             sample_results.append(result.to_dict())
 
-        adapter.unload()
+        if model_id not in skip_unload:
+            adapter.unload()
         summary_item = aggregate_results(model_id=model_id, results=model_results, profile=profile)
         summary.append(summary_item.to_dict())
+
+    _retain_adapters(model_registry, skip_unload)
+
+    return AggregateReport.build(
+        experiment_id=config.experiment_id,
+        dataset_name=config.dataset_name,
+        config=config.to_dict(),
+        summary=summary,
+        sample_results=sample_results,
+        satisfaction_profile=profile.to_dict(),
+        charts=_build_chart_payload(summary),
+        conclusion_text=_build_conclusion(summary),
+    )
+
+
+def run_experiment_from_specs(
+    config: ExperimentConfig,
+    dataset_items: list[DatasetManifest],
+    model_specs: list[dict],
+    profile: SatisfactionProfile,
+) -> AggregateReport:
+    summary: list[dict] = []
+    sample_results: list[dict] = []
+
+    for spec in model_specs:
+        single_config = ExperimentConfig(
+            experiment_id=config.experiment_id,
+            model_ids=[str(spec["model_id"])],
+            dataset_name=config.dataset_name,
+            dataset_split=config.dataset_split,
+            device=str(spec.get("device", config.device)),
+            batch_size=config.batch_size,
+            metrics_profile=config.metrics_profile,
+            output_dir=config.output_dir,
+            notes=config.notes,
+        )
+        skip_unload = {str(spec["model_id"])} if _should_isolate_model_spec(spec) else None
+        report = run_experiment(
+            config=single_config,
+            dataset_items=dataset_items,
+            model_registry=build_model_registry_from_specs([spec]),
+            profile=profile,
+            skip_unload_model_ids=skip_unload,
+        )
+        summary.extend(report.summary)
+        sample_results.extend(report.sample_results)
 
     return AggregateReport.build(
         experiment_id=config.experiment_id,
@@ -112,6 +165,21 @@ def _resource_snapshot() -> tuple[float | None, float | None, float | None]:
     mem_mb = round(process.memory_info().rss / 1024 / 1024, 4)
     cpu_pct = round(psutil.cpu_percent(interval=None), 4)
     return cpu_pct, mem_mb, None
+
+
+def _should_isolate_model_spec(model_spec: dict) -> bool:
+    return (
+        str(model_spec.get("model_id", "")) == "faster_whisper"
+        and str(model_spec.get("device", "cpu")) == "cuda"
+        and not bool(model_spec.get("simulate", True))
+    )
+
+
+def _retain_adapters(model_registry: dict[str, object], retained_model_ids: set[str]) -> None:
+    for model_id in retained_model_ids:
+        adapter = model_registry.get(model_id)
+        if adapter is not None:
+            _PROCESS_LIFETIME_ADAPTERS.append(adapter)
 
 
 def _build_chart_payload(summary: list[dict]) -> dict[str, list[dict]]:

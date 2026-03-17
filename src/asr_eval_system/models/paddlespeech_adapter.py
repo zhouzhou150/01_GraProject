@@ -19,6 +19,8 @@ class PaddleSpeechAdapter(ModelAdapter):
         super().__init__(model_id=model_id, device=device, simulate=simulate)
         self.lang = lang
         self.postprocess = postprocess
+        self.codeswitch = self.lang == "zh_en"
+        self.model_name = "conformer_talcs" if self.codeswitch else None
         self._executor = None
 
     def load(self) -> None:
@@ -48,6 +50,8 @@ class PaddleSpeechAdapter(ModelAdapter):
                 self.simulate = False
                 self.backend_name = "paddlespeech"
                 self.backend_detail = f"{self.lang} / {target_device}"
+                if self.codeswitch:
+                    self.runtime_note = "zh_en 模式已自动启用 PaddleSpeech codeswitch，并切换到 conformer_talcs。"
         except Exception as exc:
             self.load_error = str(exc)
             self.loaded = False
@@ -61,7 +65,10 @@ class PaddleSpeechAdapter(ModelAdapter):
         if not self.loaded:
             self.load()
         if self._executor is not None:  # pragma: no cover
-            result = self._executor(audio_file=audio_path, lang=self.lang)
+            kwargs = {"audio_file": audio_path, "lang": self.lang, "codeswitch": self.codeswitch}
+            if self.model_name:
+                kwargs["model"] = self.model_name
+            result = self._executor(**kwargs)
             return str(result).strip()
         return build_simulated_prediction(audio_path, error_rate=0.09, seed_bias=41)
 

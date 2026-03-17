@@ -7,6 +7,15 @@ from asr_eval_system.models.base import ModelAdapter
 from asr_eval_system.models.simulated import build_simulated_prediction
 
 
+def _normalize_compute_type(device: str, compute_type: str) -> tuple[str, str]:
+    requested = (compute_type or "int8").lower()
+    if device == "cuda" and requested == "float32":
+        return "float16", "CUDA 下 float32 容易触发 Faster-Whisper/CT2 不稳定，已自动切换为 float16。"
+    if device == "cpu" and requested == "float16":
+        return "int8", "CPU 下 float16 兼容性较弱，已自动切换为 int8。"
+    return requested, ""
+
+
 class FasterWhisperAdapter(ModelAdapter):
     def __init__(
         self,
@@ -19,7 +28,8 @@ class FasterWhisperAdapter(ModelAdapter):
     ) -> None:
         super().__init__(model_id=model_id, device=device, simulate=simulate)
         self.model_size = model_size
-        self.compute_type = compute_type
+        self.requested_compute_type = (compute_type or "int8").lower()
+        self.compute_type, self.runtime_note = _normalize_compute_type(device, self.requested_compute_type)
         self.language = language
         self._model = None
 

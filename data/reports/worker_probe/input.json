@@ -1,0 +1,154 @@
+{
+  "config": {
+    "experiment_id": "probe_135508",
+    "model_ids": [
+      "faster_whisper"
+    ],
+    "dataset_name": "yesno_manifest",
+    "dataset_split": "test",
+    "device": "cpu",
+    "batch_size": 1,
+    "metrics_profile": "default",
+    "output_dir": "data/reports",
+    "notes": "probe"
+  },
+  "dataset_items": [
+    {
+      "sample_id": "0_0_0_0_1_1_1_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_0_1_1_1_1.wav",
+      "transcript": "no no no no yes yes yes yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_0_1_0_0_0_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_1_0_0_0_1.wav",
+      "transcript": "no no no yes no no no yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_0_1_0_1_1_0",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_0_1_0_1_1_0.wav",
+      "transcript": "no no no yes no yes yes no",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_0_0_1_0",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_0_1_0.wav",
+      "transcript": "no no yes no no no yes no",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_0_1_1_0",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_1_1_0.wav",
+      "transcript": "no no yes no no yes yes no",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_0_1_1_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_0_1_1_1.wav",
+      "transcript": "no no yes no no yes yes yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_1_0_0_0",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_0_0.wav",
+      "transcript": "no no yes no yes no no no",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_1_0_0_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_0_1.wav",
+      "transcript": "no no yes no yes no no yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_0_1_0_1_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_0_1_0_1_1.wav",
+      "transcript": "no no yes no yes no yes yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    },
+    {
+      "sample_id": "0_0_1_1_0_0_0_1",
+      "audio_path": "F:\\01_GraProject\\data\\external\\yesno\\waves_yesno\\waves_yesno\\0_0_1_1_0_0_0_1.wav",
+      "transcript": "no no yes yes no no no yes",
+      "duration_sec": 0.0,
+      "split": "test",
+      "scene_tag": "yesno",
+      "noise_tag": "clean",
+      "accent_tag": "english"
+    }
+  ],
+  "model_spec": {
+    "model_id": "faster_whisper",
+    "device": "cuda",
+    "simulate": false,
+    "options": {
+      "model_size": "base",
+      "compute_type": "float32",
+      "lang": "en"
+    }
+  },
+  "profile": {
+    "lit_weights": {
+      "accuracy_semantic": 0.45,
+      "latency": 0.25,
+      "robustness": 0.2,
+      "resource": 0.1
+    },
+    "survey_weights": null,
+    "final_weights": {
+      "accuracy_semantic": 0.45,
+      "latency": 0.25,
+      "robustness": 0.2,
+      "resource": 0.1
+    },
+    "good_bad_thresholds": {
+      "high": 85,
+      "good": 70,
+      "fair": 60
+    },
+    "score_mode": "mixed",
+    "source_notes": [
+      "Kim et al., SemDist and user-perceived correlation, Interspeech 2022",
+      "Shangguan et al., user-perceived latency for E2E ASR, Interspeech 2021",
+      "Walker et al., PARADISE framework for user satisfaction"
+    ],
+    "survey_blend_ratio": 0.3
+  }
+}
